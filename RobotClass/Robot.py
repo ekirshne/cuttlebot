@@ -54,9 +54,201 @@ class Robot():
             right_velocity = 0
         )
 
+    #align the robot with the ball
+    def _align(self, color):
+        self.vision.camera.set_color_filter(color, precision=15)
+        stop = False
+        K_p = 0.35
+        K_i = 0.015
+        robot_proportion_angle_deg = 0
+        robot_sum_angle_deg = 0
+        pan_offset = 5.0
+        while(1):
+            mask = self.vision.camera.get_color_mask()
+            #If there are less than 10 active pixels
+            if(np.sum(mask/255) < 10):
+                time.sleep(0.1)
+                if(stop):
+                    return
+                stop = True
+                continue
+
+            #found object, reset stopping condition
+            stop = False
+            #The mask exists and we know we have found an objects (>=10 active pixels in mask)
+            #Get center index in (Row,Col) format
+            mask_center = np.flip((np.array(mask.shape)-1)/2)
+            avg_point = self.vision.get_avg_mask_point(mask, relative_point=mask_center)
+            #Now update the pan tilt unit according to the output of the control system (avg_point); with reference point at (0,0)
+            self.vision.pan_tilt_unit.update(avg_point)
+            #Now move the robot according to the current angle of the pan unit
+            cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556
+            cur_pan_angle -= pan_offset
+            
+            robot_proportion_angle_deg = K_p*cur_pan_angle
+            robot_sum_angle_deg += K_i*cur_pan_angle
+            
+            #compute the turn velocity
+            curr_left_velocity = -(robot_proportion_angle_deg+robot_sum_angle_deg)/90.0
+            curr_right_velocity = (robot_proportion_angle_deg+robot_sum_angle_deg)/90.0
+
+            #check if the turn velocity has gotten small enough to stop update loop
+            print(cur_pan_angle, np.abs(curr_left_velocity))
+            if((np.abs(cur_pan_angle) < 2.50) and (np.abs(curr_left_velocity) < 0.01)):
+                self.rvr.drive_tank_si_units(
+                    left_velocity = 0,
+                    right_velocity = 0
+                )
+                return
+
+            #if not, keep updating speed
+            else:
+                self.rvr.drive_tank_si_units(
+                    left_velocity = curr_left_velocity,
+                    right_velocity = curr_right_velocity
+                )
+
+    def _stalk(self, color):
+        #Look for red object
+        self.vision.camera.set_color_filter(color, precision=15)
+        #take 3 pictures and get the average bounding box pixel width of all detected one
+        p_width_1 = 0
+        img_found = 0
+        for i in range(5):
+            #get the color mask
+            mask = self.vision.camera.get_color_mask()
+            #If there are less than 10 active pixels
+            if(np.sum(mask/255) < 10):
+                #wait and try again
+                time.sleep(0.1)
+                print("Width_1=None")
+                continue
+            #Get the largest contour for the mask and find the centroid relative to the center of the mask
+            largest_contour = self.vision.get_largest_contour(mask)
+            largest_contour_bounding_box = self.vision.get_contour_bounding_box(largest_contour)
+            if(largest_contour_bounding_box[2] < 5):
+                print("Object too small!")
+                print(f"width = {largest_contour_bounding_box[2]}")
+                continue
+            p_width_1 += largest_contour_bounding_box[2]
+            print(f"Width_1={largest_contour_bounding_box[2]}")
+            #The mask exists and we know we have found an objects (>=20 active pixels in mask)
+            img_found += 1
+        #get the average width or specify no width for no object being found
+        if(img_found != 0):
+            print(f"total_width_1={p_width_1}")
+            p_width_1 /= img_found
+            print(f"img_found={img_found}")
+            print(f"avg_width_1={p_width_1}")
+        else:
+            p_width_1 = None
+        #move radially inward by m meters
+        movement = -0.15 #m
+        self.rvr.reset_yaw()
+        time.sleep(0.1)
+        self.rvr.reset_locator_x_and_y()
+        time.sleep(0.1)
+        self.rvr.drive_to_position_si(
+            yaw_angle = 0,
+            x=0,
+            y=movement,
+            linear_speed=0.15,
+            flags=0 if movement>0 else 1
+        )
+        time.sleep(2.5)
+        #get the average width of 3 pictures for the object at the new position
+        p_width_2 = 0
+        img_found = 0
+        for i in range(5):
+            #get the color mask
+            mask = self.vision.camera.get_color_mask()
+            #If there are less than 10 active pixels
+            if(np.sum(mask/255) < 10):
+                #wait and try again
+                time.sleep(0.1)
+                print("Width_2=None")
+                continue
+            #Get the largest contour for the mask and find the centroid relative to the center of the mask
+            largest_contour = self.vision.get_largest_contour(mask)
+            largest_contour_bounding_box = self.vision.get_contour_bounding_box(largest_contour)
+            if(largest_contour_bounding_box[2] < 5):
+                print("Object width too small!")
+                print(f"width = {largest_contour_bounding_box[2]}")
+                continue
+            p_width_2 += largest_contour_bounding_box[2]
+            print(f"Width_2={largest_contour_bounding_box[2]}")
+            #The mask exists and we know we have found an objects (>=20 active pixels in mask)
+            img_found += 1
+        #get the average width or specify no width for no object being found
+        if(img_found != 0):
+            print(f"total_width_2={p_width_2}")
+            p_width_2 /= img_found
+            print(f"img_found={img_found}")
+            print(f"avg_width_2={p_width_2}")
+        else:
+            p_width_2 = None
+        #Ensure that the width of the object was found in both cases
+        if(p_width_1==None or p_width_2==None):
+            print(f"Images not found! width1={p_width_1}, width2={p_width_2}")
+            return(None)
+        elif(np.abs(p_width_1-p_width_2) < 2):
+                print("WARNING: Not enough difference in images to properly compute depth info")
+                return(-1)
+        #Use the two average widths of the two positions to get an estimation of depth
+        obj_depth = self.vision.get_temporal_difference_object_depth(
+            p_length1=p_width_1, 
+            p_length2=p_width_2, 
+            distance_moved_radially_inward=movement
+        )
+        print(obj_depth)
+        return(obj_depth)
+
+
+    def _test_attack(self, color):
+        self._align(color)
+        depth = self._stalk(color)
+        print(f"depth = {depth}")
+        if(depth == None):
+            print("FAIL!")
+            return
+        self.claw.set_percent_open(90)
+        time.sleep(1.0)
+        
+        '''
+        self.claw.set_percent_open(80)
+        self.rvr.reset_yaw()
+        time.sleep(0.1)
+        self.rvr.reset_locator_x_and_y()
+        time.sleep(0.1)
+        self.rvr.drive_to_position_si(
+            yaw_angle = 0,
+            x=0,
+            y=depth,
+            linear_speed=1.5,
+            flags=0
+        )
+        time.sleep(3)
+        self.claw.capture_object()
+        '''
+        
+        #case after object
+        velocity = 1.15
+        self.rvr.drive_tank_si_units(
+            left_velocity = velocity,
+            right_velocity = velocity
+        )
+        distance_offset = 0.15 #m
+        time.sleep((depth-distance_offset)/velocity)
+
+        #transition into move and grab code
+        reward = self._move_and_grab_color(color)
+        print(f"Reward = {reward}")
+
+
     #either approach or run
     def _perform_action(self, action, color):
         if(action == "APPROACH"):
+            self._align(color)
             reward = self._move_and_grab_color(color)
             self.claw.release_object()
             self.rvr.drive_tank_si_units(
@@ -68,7 +260,8 @@ class Robot():
                 left_velocity = 0,
                 right_velocity = 0
             )
-        else: #RUN
+        #run away
+        elif(action == "RUN"):
             self._run()
             time.sleep(1)
             reward = 0
