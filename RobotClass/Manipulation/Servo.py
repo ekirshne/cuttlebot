@@ -46,7 +46,9 @@ class Servo():
 
 
     def set_angle_deg(self, angle) -> None:
-        '''This function adjusts the angle of rotation for the servo motor within the specified bounds. 
+        '''Sets the angle of rotation for the servo motor in degrees.
+
+        This function adjusts the angle of rotation for the servo motor within the specified bounds. 
         It calculates the duty cycle percentage based on the input angle and sets it for the servo. 
         If hardware PWM is enabled, it directly applies the duty cycle, otherwise it updates the 
         servo's duty cycle. The angle and timestamp attributes of the object are updated accordingly.'''
