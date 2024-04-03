@@ -21,7 +21,9 @@ class Claw():
 
 
     def set_percent_open(self, pct_open: float) -> None:
-        '''This function calculates the angle needed to move the claw's servo to achieve
+        '''Sets the percent open of the claw on the Cuttlebot.
+        
+        This function calculates the angle needed to move the claw's servo to achieve
         the given percentage of openness. It then moves the servo accordingly and 
         updates the the Claw's percent_open attribute. The argument pct_open should be
         passed as a float between 0 and 100.'''
@@ -67,7 +69,9 @@ class Claw():
 
     # TODO: FIX LATER TO INCORPORATE CONCURRENCY
     def capture_object(self) -> None:
-        '''This function opens the claw completely and then gradually closes it while
+        '''Opens the claw and slowly closes it until an object is detected or the closing boundary is reached.
+        
+        This function opens the claw completely and then gradually closes it while
         checking for the presence of an object to capture. If an object is detected, 
         it stops closing the claw and returns. This function is designed to be run in a
         loop until an object is captured or the closing boundary is reached.'''
@@ -89,7 +93,9 @@ class Claw():
 
 
     def release_object(self) -> None:
-        '''This function starts with the claw at its current state and gradually opens it until
+        '''Releases an object held by the claw by gradually opening it until the claw is fully open.
+        
+        This function starts with the claw at its current state and gradually opens it until
         it is fully open while periodically checking if the object has been fully released.
         If the object is fully released, the function stops opening the claw and returns.'''
 
