@@ -26,7 +26,9 @@ class Cognition():
 
 
     def print_q_table(self) -> None:
-        '''This function prints the values associated with each state-action pair in the Q-table.
+        '''Prints the current Q-table.
+
+        This function prints the values associated with each state-action pair in the Q-table.
         The Q-table is a dictionary where keys represent states and values represent dictionaries
         of actions and their corresponding Q-values. The 'NONE' state is excluded from printing.'''
 
@@ -54,7 +56,9 @@ class Cognition():
 
 
     def get_state_with_largest_punishment(self, colors_in_view: list) -> str | None:
-        '''This function iterates through the colors in the robot's view and checks 
+        '''Returns the color with the largest punishment according to the Q-table.
+
+        This function iterates through the colors in the robot's view and checks 
         their corresponding Q-values in the Q-table. It identifies the color with 
         the lowest Q-value among the 'RUN' and 'APPROACH' actions, which indicates 
         the largest punishment. If a color is not present in the Q-table, it initializes 
@@ -98,7 +102,9 @@ class Cognition():
 
 
     def get_action(self, state: str) -> str:
-        '''This function retrieves the Q-values associated with the 'RUN' and 'APPROACH' actions 
+        '''Determines the action to take based on the given state.
+
+        This function retrieves the Q-values associated with the 'RUN' and 'APPROACH' actions 
         for the given state from the Q-table. If the state is not present in the Q-table, it 
         initializes its Q-values to zero. It then computes the softmax probabilities for these 
         Q-values and selects an action based on these probabilities. The function returns either 
@@ -135,7 +141,9 @@ class Cognition():
 
 
     def get_max_q_at_state(self, state: str) -> float | None:
-        '''This function retrieves the Q-values associated with different actions for the given state 
+        '''Returns the maximum Q-value for a given state.
+
+        This function retrieves the Q-values associated with different actions for the given state 
         from the Q-table and returns the maximum Q-value among them.'''
 
         #get the q_table row of actions for a given state
@@ -157,7 +165,9 @@ class Cognition():
 
 
     def update_q_table(self, state: str, action: str, reward: float, new_state: str) -> None:
-        '''This function updates the Q-value of a given state-action pair in the Q-table 
+        '''Updates the Q-table based on the Q-learning algorithm.
+
+        This function updates the Q-value of a given state-action pair in the Q-table 
         using the Q-learning update rule. The Q-learning update rule calculates the 
         updated Q-value based on the reward received, the discount factor, the learning 
         rate, and the maximum possible Q-value for the new state.'''
