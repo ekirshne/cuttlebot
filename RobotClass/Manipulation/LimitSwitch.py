@@ -2,6 +2,8 @@ import RPi
 import RPi.GPIO as GPIO
 
 class LimitSwitch():
+
+
     #Limit Switch class constructor
     def __init__(self, pin, use_pullup_config=True):
         #Save object data members
@@ -12,11 +14,18 @@ class LimitSwitch():
         #Set up the specified pin
         GPIO.setup(pin, GPIO.IN)
 
-    #Determine if the limit switch is pressed or not
-    def is_pressed(self):
+
+
+
+    def is_pressed(self) -> bool:
+        '''This function returns True if the LimitSwitch is pressed in and False otherwise.'''
+
         # if pullup -> pressed is 1; if not pullup -> pressed is 0
-        return(GPIO.input(self.pin) == self.use_pullup_config)
+        return GPIO.input(self.pin) == self.use_pullup_config
     
-    #Deconstructor to cleanup the GPIO pins after finished with object instance
-    def __del__(self):
+
+
+
+    def __del__(self) -> None:
+        '''A deconstructor to cleanup the GPIO pins after finished with object instance'''
         GPIO.cleanup(self.pin)
