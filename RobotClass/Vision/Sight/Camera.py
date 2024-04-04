@@ -7,12 +7,13 @@ import numpy as np
 import time
 import cv2
 import glob
-
 import sys
 #sys.path.append("/home/cuttlebot/cuttlebot/RobotClass/Vision/Sight/Filters")
 from Vision.Sight.Filters.ColorFilter import ColorFilter
 
 class Camera():
+
+
     def __init__(self, camera_ID=None):
         #Specify the full diagonal FOV of the camera
         self.FOV_diagonal_full_deg = 160
@@ -20,7 +21,7 @@ class Camera():
         
         #Calibrate the camera
         self.calibration_data = None
-        if(camera_ID == None):
+        if camera_ID == None:
             print("Warning: Starting camera without calibration! Please give camera ID to calibrate!")
         else:
             print("\n=========================")
@@ -32,7 +33,7 @@ class Camera():
             calibration_folder_path = os.path.join(calibration_folder_path, f"Cam{camera_ID}")
             isFisheye_Camera = self.FOV_diagonal_full_deg >= 160
             self.isCalibrated = self._calibrate_camera(calibration_folder_path, checkerboard_box_length_mm=26.0, checkerboard_inner_corner_dimension=(5,9), isFisheye=isFisheye_Camera)
-            if(self.isCalibrated):
+            if self.isCalibrated:
                 print("Camera Calibrated!")
             else:
                 print("Camera Calibration Failed!")
@@ -106,8 +107,17 @@ class Camera():
         #Instantiate the color filter object
         self.color_filter = ColorFilter()
 
-    #calibrate the camera by obtaining a JSON file or a list of images to create a JSON
-    def _calibrate_camera(self, calibration_folder_path, checkerboard_box_length_mm, checkerboard_inner_corner_dimension, isFisheye):
+
+
+
+    def _calibrate_camera(self, calibration_folder_path: str, checkerboard_box_length_mm: float, checkerboard_inner_corner_dimension: tuple[int, int], isFisheye: bool) -> bool:
+        '''Calibrates the camera by obtaining a JSON file or a list of images to create a JSON.
+
+        This method calibrates the camera either by loading a pre-existing JSON file containing calibration parameters
+        or by calibrating using checkerboard images in the specified folder. If calibration is successful, it saves the
+        calibration parameters to a JSON file.'''
+        
+
         #First try to find the JSON file
         try:
             #load the JSON file if found
@@ -119,7 +129,7 @@ class Camera():
                 for key in self.calibration_data.keys():
                     self.calibration_data[key] = np.array(self.calibration_data[key])
             #Camera successfully calibrated, so return true
-            return(True)
+            return True
         #If the JSON File doesn't exist, find and use png images in the calibration folder
         except:
             #referencing: https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html
@@ -155,7 +165,7 @@ class Camera():
                 chessboard_corner_location_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
                 ret, corners = cv2.findChessboardCorners(checkerboard_image, checkerboard_inner_corner_dimension, flags=chessboard_corner_location_flags)
                 #see if the image was found
-                if(ret):
+                if ret:
                     #If found, add object point and image point
                     object_point_list.append(object_point)
                     image_point = cv2.cornerSubPix(gray_image, corners, winSize=(11,11), zeroZone=(-1,-1), criteria=subpixel_criteria)
@@ -167,17 +177,13 @@ class Camera():
                 #increment image index by 1
                 image_index += 1
             #if images were successfully parsed, solve for calibration constants
-            if(image_index > 0):
+            if image_index > 0:
                 print(f"{image_index} calibration images found in folder: {calibration_folder_path}")
                 print("Computing calibration parameters...")
                 #using fisheye model
-                if(isFisheye):
+                if isFisheye:
                     print("Using fisheye camera model...")
                     #change object point dimensions according to https://github.com/opencv/opencv/issues/9150
-                    
-                    
-                    
-                    
                     #
                     #
                     #
@@ -202,7 +208,7 @@ class Camera():
                     print("Using regular camera model...")
                     ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors = cv2.calibrateCamera(object_point_list, image_point_list, imageSize=gray_image.shape[::-1], cameraMatrix=None, distCoeffs=None)
                 #if calibration parameters successfully computed, save them to a JSON
-                if(ret):
+                if ret:
                     print("Calibration parameters successfully found!")
                     #save parameters to a JSON file
                     calibration_data_JSON = {
@@ -218,23 +224,31 @@ class Camera():
                         for key in self.calibration_data.keys():
                             self.calibration_data[key] = np.array(self.calibration_data[key])
                     #Camera successfully calibrated, so return true
-                    return(True)
+                    return True
                 #if calibration parameters failed to be found, indicate it to the user
                 else:
                     print(f"Calibration parameters could not be found!")
                     #Camera did not successfully calibrate, so return false
-                    return(False)
+                    return False
                     #raise Exception(f"Calibration computation error on image set!")
             #if images were not successfully parsed, indicate it to the user
             else:
                 print("Error! No calibration file or images found! Aborting calibration process!")
                 #Camera did not successfully calibrate, so return false
-                return(False)
+                return False
         #catch all return statement (assume unsuccessful calibration)
-        return(False)
+        return False
+
+
+
 
     #compute the new FOV of the diagonal, x, and y from a crop
-    def __compute_new_FOV(self, full_dim_wh, crop_dim_wh, FOV_diagonal_full_deg):
+    def __compute_new_FOV(self, full_dim_wh: tuple[float, float], crop_dim_wh: tuple[float, float], FOV_diagonal_full_deg: float) -> np.ndarray:
+        '''Computes the new FOV of the diagonal, x, and y from a crop.
+
+        This method computes the new field of view (FOV) for the diagonal, x-axis, and y-axis
+        based on the full dimensions of the image and the cropped dimensions.'''
+
         #dwh = diagonal, width, height
         len_full_dwh = np.insert(full_dim_wh, 0, np.linalg.norm(full_dim_wh))
         len_crop_dwh = np.insert(crop_dim_wh, 0, np.linalg.norm(crop_dim_wh))
@@ -242,57 +256,83 @@ class Camera():
         FOV_diagonal_full_rad = FOV_diagonal_full_deg*np.pi/180
         newFOV_rad_dwh = 2*np.arctan((len_full_dwh/len_full_dwh[0] * np.tan(FOV_diagonal_full_rad/2)) / shrink_factor_dwh)
         newFOV_deg_dwh = newFOV_rad_dwh*180/np.pi
-        return(newFOV_deg_dwh)
+        return newFOV_deg_dwh
 
-    #Get the main frame image from the camera
-    def get_image(self):
-        return(self.picam2.capture_array())
 
-    #Get the color mask of the camera's current view
-    def get_color_mask(self):
+
+
+    def get_image(self) -> np.ndarray:
+        '''Gets the main frame image from the camera.'''
+        return self.picam2.capture_array()
+
+
+
+
+    def get_color_mask(self) -> np.ndarray:
+        '''Gets the color mask of the camera's current view.'''
+
         #Get the image from the camera
         image = self.get_image()
         mask = self.color_filter.get_color_filter_mask(image)
         #Return the resulting mask
-        return(mask)
+        return mask
     
-    #Change the color filter range
-    def set_color_filter(self, hue, precision):
+
+
+
+    def set_color_filter(self, hue: int, precision: int) -> None:
+        '''Changes the color filter range.'''
         self.color_filter.set_filter(hue, precision)
 
-    #get the FOV of the camera in degrees
-    def get_FOV_deg(self, type_dwh):
+
+
+
+    def get_FOV_deg(self, type_dwh: str) -> float:
+        '''Gets the FOV of the camera in degrees.'''
+
         type_dwh = type_dwh.upper()
-        if(type_dwh == 'D'):
-            return(self.FOV_diagonal_deg)
-        elif(type_dwh == 'W'):
-            return(self.FOV_width_deg)
-        elif(type_dwh == 'H'):
-            return(self.FOV_height_deg)
+        if type_dwh == 'D':
+            return self.FOV_diagonal_deg
+        elif type_dwh == 'W':
+            return self.FOV_width_deg
+        elif type_dwh == 'H':
+            return self.FOV_height_deg
         else:
             raise Exception("Invald dwh type!")
 
-    #get the FOV of the camera in radians
-    def get_FOV_rad(self, type_dwh):
+
+
+
+    def get_FOV_rad(self, type_dwh: str) -> float:
+        '''Gets the FOV of the camera in radians.'''
+
         FOV = self.get_FOV_deg(type_dwh)
-        return(FOV*np.pi/180)
+        return FOV*np.pi/180
 
-    #get the maximum pixel dimension in a given direction: (D)iagonal, (W)idth, (H)eight
-    def get_max_dimension_pxl(self, type_dwh):
+
+
+
+    def get_max_dimension_pxl(self, type_dwh: str) -> float:
+        '''Gets the maximum pixel dimension in a given direction: (D)iagonal, (W)idth, (H)eight.'''
+
         type_dwh = type_dwh.upper()
-        if(type_dwh == 'D'):
-            return(np.sqrt(self.width**2 + self.height**2))
-        elif(type_dwh == 'W'):
-            return(self.width)
-        elif(type_dwh == 'H'):
-            return(self.height)
+        if type_dwh == 'D':
+            return np.sqrt(self.width**2 + self.height**2)
+        elif type_dwh == 'W':
+            return self.width
+        elif type_dwh == 'H':
+            return self.height
         else:
             raise Exception("Invald dwh type!")
 
-    #Get the calibrated main frame image from the camera
-    def get_calibrated_image(self, alpha=0.0):
+
+
+
+    def get_calibrated_image(self, alpha: float=0.0) -> np.ndarray:
+        '''Gets the calibrated main frame image from the camera.'''
+
         #Check to see if the camera has been calibrated
-        if(not self.isCalibrated):
+        if not self.isCalibrated:
             raise Exception("Error! Trying to get calibrated image before camera could be properly calibrated!")
         #get the image from the camera alongside its dimensions
         uncalibrated_image = self.picam2.capture_array()
@@ -300,13 +340,19 @@ class Camera():
         #compute the new optimal camera matrix to better undistort the image
         new_camera_matrix, roi = cv2.getOptimalNewCameraMatrix(self.calibration_data["camera_matrix"], self.calibration_data["distortion_coefficients"], imageSize=(w,h), alpha=alpha, newImgSize=(w,h))
         new_image = cv2.undistort(uncalibrated_image, self.calibration_data["camera_matrix"], self.calibration_data["distortion_coefficients"], dst=None, newCameraMatrix=new_camera_matrix)
-        return(new_image)
+        return new_image
 
-    #Get the uncalibrated main frame image from the camera
-    def get_uncalibrated_image(self):
-        return(self.picam2.capture_array())
 
-    #destructor for camera class
-    def __del__(self):
+
+
+    def get_uncalibrated_image(self) -> np.ndarray:
+        '''Gets the uncalibrated main frame image from the camera.'''
+        return self.picam2.capture_array()
+
+
+
+
+    def __del__(self) -> None:
+        '''Destructor for camera class'''
         #recommended to close pi-camera from post: https://stackoverflow.com/questions/76548060/access-picamera2-within-a-surrounding-class-on-raspberry-pi
         self.picam2.close()
