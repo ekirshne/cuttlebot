@@ -4,67 +4,44 @@ import board
 import neopixel
 
 # setting up the led
-led = neopixel.NeoPixel(board.D12, 70, pixel_order=neopixel.GRB, brightness=0.1)
+led = neopixel.NeoPixel(board.D21, 100, pixel_order=neopixel.GRB, brightness=0.75)
 
 x = 0
-wave_frequency = 0.2
-blue = (98, 144, 220)
-black = (39, 39, 41) #not really black but this is for the blue/black wave
+wave_frequency = 0.1
+blue = (0, 255, 255)
+black = (0, 10, 10) #not really black but this is for the blue/black wave
 
 home = (138, 43, 226)
 
-row_1 = 0
-row_2 = 10
-row_3 = 20
-row_4 = 30
-row_5 = 40
-row_6 = 50
-row_7 = 60
-row_8 = 70
+row_led_count_back2front = [
+	14,
+	17,
+	18,
+	18,
+	16,
+	13
+]
+
+def _test_shell():
+	led.fill(
+		(0, 255, 255)
+	)
+	for i in range(100):
+		led[i] = (255, 0, 0)
+		time.sleep(1)
+	
 
 # keyboard input to determine what to do
 command = input("Pick either 1 (hypnotize) or 2 (camouflage): ")
 
 def hypnotize():
-	led.fill(blue)
-	for x in range(row_1, row_2):
-		led[x] = black
-		
-	time.sleep(wave_frequency)
-	
-	led.fill(blue)
-	for x in range(row_2, row_3):
-		led[x] = black
-		
-	time.sleep(wave_frequency)
-	
-	led.fill(blue)
-	for x in range(row_3, row_4):
-		led[x] = black
-		
-	time.sleep(wave_frequency)
-	
-	led.fill(blue)
-	for x in range(row_4, row_5):
-		led[x] = black
-	
-	time.sleep(wave_frequency)
-	
-	led.fill(blue)
-	for x in range(row_5, row_6):
-		led[x] = black
-	
-	time.sleep(wave_frequency)
-	
-	led.fill(blue)
-	for x in range(row_6, row_7):
-		led[x] = black
-	
-	time.sleep(wave_frequency)
-	
-	led.fill(blue)
-	for x in range(row_7, row_8):
-		led[x] = black
+	start_index = 0
+	for led_row_count in row_led_count_back2front:
+		led.fill(blue)
+		for led_index in range(start_index, start_index+led_row_count):
+			led[led_index] = black
+		time.sleep(wave_frequency)
+		start_index += led_row_count
 		
 def camouflage():
 	led.fill(home)
@@ -74,6 +51,7 @@ def camouflage():
 # set the color of the entire led strip
 while True:
 	#led.fill((98, 144, 220))
+	#_test_shell()
 	
 	if command == '1':
 		hypnotize()
@@ -85,7 +63,7 @@ while True:
 		home = (R, G, B)
 		camouflage()
 		
-	command = input("Pick either 1 (hypnotize) or 2 (camouflage): ")
+	#command = input("Pick either 1 (hypnotize) or 2 (camouflage): ")
 	
 	
 

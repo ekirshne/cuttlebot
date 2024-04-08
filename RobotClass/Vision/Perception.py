@@ -129,7 +129,7 @@ class Perception():
 
 
     #modified from: https://stackoverflow.com/questions/44588279/find-and-draw-the-largest-contour-in-opencv-on-a-specific-color-python
-    def get_largest_contour(self, mask: np.ndarray) -> np.ndarray | None:
+    def get_largest_contour(self, mask: np.ndarray) -> np.ndarray: #np.ndarray | None:
         '''Return the largest contour from a given mask.
 
         This function applies blurring to the mask to reduce noise, then applies a threshold to create a binary image.

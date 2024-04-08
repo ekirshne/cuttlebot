@@ -55,7 +55,7 @@ class Cognition():
 
 
 
-    def get_state_with_largest_punishment(self, colors_in_view: list) -> str | None:
+    def get_state_with_largest_punishment(self, colors_in_view: list) -> str: #str | None:
         '''Returns the color with the largest punishment according to the Q-table.
 
         This function iterates through the colors in the robot's view and checks 
@@ -140,7 +140,7 @@ class Cognition():
 
 
 
-    def get_max_q_at_state(self, state: str) -> float | None:
+    def get_max_q_at_state(self, state: str) -> float: #float | None:
         '''Returns the maximum Q-value for a given state.
 
         This function retrieves the Q-values associated with different actions for the given state 

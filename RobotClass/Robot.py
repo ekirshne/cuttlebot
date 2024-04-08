@@ -9,6 +9,11 @@ from Manipulation.Claw import Claw
 from Vision.Perception import Perception
 from Cognition.Cognition import Cognition
 
+#--- for shell
+#import board
+#import neopixel
+#---
+
 class Robot():
 
 
@@ -28,10 +33,12 @@ class Robot():
         time.sleep(1)
         #Now the claw (pins 11 and 13 for the limit switches are not currently in use)
         self.claw = Claw(servo_pin=11, right_limit_switch_pin=13, left_limit_switch_pin=15)
-        #Then the vision module
+        #The vision module
         self.vision = Perception()
-        #Last, the ognition module
+        #The Cognition module
         self.cognition = Cognition()
+        #The Shell LEDs
+        #self.led = neopixel.NeoPixel(board.D21, 100, pixel_order=neopixel.GRB, brightness=0.75)
 
 
 
@@ -139,7 +146,7 @@ class Robot():
 
 
 
-    def _stalk(self, color: str) -> float | None:
+    def _stalk(self, color: str) -> float: #float | None:
         '''Attempts to stalk an object of the specified color.
 
         This function attempts to track an object of the specified color. It sets the color 
@@ -880,7 +887,7 @@ class Robot():
              
 
 
-    def get_object_depth_info_forward_to_back(self) -> float | None:
+    def get_object_depth_info_forward_to_back(self) -> float: #float | None:
         '''Measures the depth of an object using the forward-to-backward approach.
 
         This method utilizes the robot's camera to detect and measure the depth of an object in front of it. 
