@@ -8,7 +8,7 @@ from random import choice as rand
 from Manipulation.Claw import Claw
 from Vision.Perception import Perception
 from Cognition.Cognition import Cognition
-from Bumper import BumperClass
+from Bumper import Bumper
 from Shell.Shell import Shell
 import board
 
@@ -32,11 +32,11 @@ class Robot():
         #Now the claw (pins 11 and 13 for the limit switches are not currently in use)
         self.claw = Claw(servo_pin=board.D17, right_limit_switch_pin=board.D27, left_limit_switch_pin=board.D22)
         #The vision module
-        self.vision = Perception()
+        #self.vision = Perception()
         #The Cognition module
         self.cognition = Cognition()
         #The Bumper
-        self.bumper = BumperClass(self.rvr, left_side_pin=board.D24, right_side_pin=board.D16, left_back_pin=board.D25, right_back_pin=board.D20)
+        self.bumper = Bumper(self.rvr, left_side_pin=board.D24, right_side_pin=board.D16, left_back_pin=board.D25, right_back_pin=board.D20)
         #The Shell
         self.shell = Shell()
 
@@ -63,6 +63,8 @@ class Robot():
     def _test_colision_detection(self):
         '''Test bumper switch'''
         self.bumper.check_limit_pressed()
+        # self.bumper.check_limit_pressed()
+
 
     def _explore(self) -> None:
         '''Randomly turns the robot to -90, 0, or 90 degrees.

@@ -4,8 +4,9 @@ robot = Robot()
 
 #robot.forage()
 #robot._test_attack(0)
-robot._test_shell()
+#robot._test_shell()
 #print(robot._move_and_grab_color(0)) #0=red; 30=yellow
+robot._test_colision_detection()
 
 
 
