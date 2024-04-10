@@ -1,6 +1,9 @@
 import time
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 from rpi_hardware_pwm import HardwarePWM
+import board
+import digitalio
+import pwmio
 
 class Servo():
 
@@ -19,25 +22,28 @@ class Servo():
         if use_hardware_PWM:
             #set the channel for the PWM
             channel = None
-            if pin == 32:
+            if pin == board.D12:
                 channel = 0
-            elif pin == 33:
+            elif pin == board.D13:
                 channel = 1
             else:
                 raise Exception("Only Pins 32 or 33 can be used for hardware PWM")
             #Instantiate the servo for the specified pwm channel (0=GPIO12/Pin32, 1=GPIO13/Pin33) at 50Hz
             self.servo = HardwarePWM(pwm_channel=channel, hz=50)
+            #Start the servo, but at 0 duty cycle
+            self.servo.start(0)
         #Case for Software PWM
         else:
             #Set board for the GPIO
-            GPIO.setmode(GPIO.BOARD)
+            ###############GPIO.setmode(GPIO.BOARD)
             #Set up the specified pin
-            GPIO.setup(pin, GPIO.OUT)
-            #Instantiate the servo at the specified pin at 50Hz
-            self.servo = GPIO.PWM(pin, 50)
+            #GPIO.setup(pin, GPIO.OUT)
 
-        #Start the servo, but at 0 duty cycle
-        self.servo.start(0)
+            #Instantiate the servo at the specified pin at 50Hz
+            #self.servo = GPIO.PWM(pin, 50)
+            self.servo = pwmio.PWMOut(self.pin, frequency=50)
+            self.servo.duty_cycle = 0
+
         #reset the servo to its center (0 degrees) if wanted
         if reset_servo_position:
             self.set_angle_deg(0)
@@ -67,7 +73,7 @@ class Servo():
         if self.use_hardware_pwm:
             self.servo.change_duty_cycle(duty_cycle_pct)
         else:
-            self.servo.ChangeDutyCycle(duty_cycle_pct)
+            self.servo.duty_cycle = duty_cycle_pct
         #Update the object data members
         self.angle = angle
         self.timestamp = time.time()
@@ -99,6 +105,7 @@ class Servo():
 
     def __del__(self) -> None:
         '''Destructor For servo to stop the PWM upon destruction.'''
-        self.servo.stop()
-        if not self.use_hardware_pwm:
-            GPIO.cleanup(self.pin)
+        if self.use_hardware_pwm:
+            self.servo.stop()
+        else:
+            self.servo.deinit()

@@ -8,11 +8,9 @@ from random import choice as rand
 from Manipulation.Claw import Claw
 from Vision.Perception import Perception
 from Cognition.Cognition import Cognition
-
-#--- for shell
-#import board
-#import neopixel
-#---
+from Bumper import BumperClass
+from Shell.Shell import Shell
+import board
 
 class Robot():
 
@@ -32,16 +30,39 @@ class Robot():
         self.rvr.reset_locator_x_and_y()
         time.sleep(1)
         #Now the claw (pins 11 and 13 for the limit switches are not currently in use)
-        self.claw = Claw(servo_pin=11, right_limit_switch_pin=13, left_limit_switch_pin=15)
+        self.claw = Claw(servo_pin=board.D17, right_limit_switch_pin=board.D27, left_limit_switch_pin=board.D22)
         #The vision module
         self.vision = Perception()
         #The Cognition module
         self.cognition = Cognition()
-        #The Shell LEDs
-        #self.led = neopixel.NeoPixel(board.D21, 100, pixel_order=neopixel.GRB, brightness=0.75)
+        #The Bumper
+        self.bumper = BumperClass(self.rvr, left_side_pin=board.D24, right_side_pin=board.D16, left_back_pin=board.D25, right_back_pin=board.D20)
+        #The Shell
+        self.shell = Shell()
 
+    def _test_shell(self):
+        self.vision.camera.set_color_filter(0, precision=15)
+        while(1):
+            #self.shell.hypnotize()
+            #time.sleep(5)
 
+            #get the color mask
+            mask = self.vision.camera.get_color_mask()
+            #If there are less than 20 active pixels
+            if np.sum(mask/255) < 50:
+                #wait and try again
+                self.shell.camouflage(color = (0, 255, 255), mode=1)
+                self.vision.pan_tilt_unit.set_servo_angles(pan_angle=10, tilt_angle=10)
+            else:
+                self.shell.camouflage(color = (255, 0, 0), mode=1)
+                self.vision.pan_tilt_unit.set_servo_angles(pan_angle=-10, tilt_angle=-10)
+            #wait to loop again
+            time.sleep(0.25)
+                
 
+    def _test_colision_detection(self):
+        '''Test bumper switch'''
+        self.bumper.check_limit_pressed()
 
     def _explore(self) -> None:
         '''Randomly turns the robot to -90, 0, or 90 degrees.
@@ -1283,9 +1304,10 @@ class Robot():
                     left_velocity = -robot_proportion_angle_deg/90.0,
                     right_velocity = robot_proportion_angle_deg/90.0
                 )
+    
 
 
-
+    
 
     #class destructor
     def __del__(self) -> None:
@@ -1295,3 +1317,4 @@ class Robot():
         It closes the connection to the RVR, ensuring proper cleanup.'''
         #close the rvr
         self.rvr.close()
+    

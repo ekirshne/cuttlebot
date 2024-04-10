@@ -1,5 +1,6 @@
-import RPi
-import RPi.GPIO as GPIO
+#import RPi
+#import RPi.GPIO as GPIO
+import digitalio
 
 class LimitSwitch():
 
@@ -7,12 +8,14 @@ class LimitSwitch():
     #Limit Switch class constructor
     def __init__(self, pin, use_pullup_config=True):
         #Save object data members
-        self.pin = pin
+        self.pin = digitalio.DigitalInOut(pin)
         self.use_pullup_config = use_pullup_config
         #Set board for the GPIO
-        GPIO.setmode(GPIO.BOARD)
+        ##############GPIO.setmode(GPIO.BOARD)
         #Set up the specified pin
-        GPIO.setup(pin, GPIO.IN)
+        ###########GPIO.setup(pin, GPIO.IN)
+        self.pin.direction = digitalio.Direction.INPUT
+
 
 
 
@@ -21,11 +24,12 @@ class LimitSwitch():
         '''This function returns True if the LimitSwitch is pressed in and False otherwise.'''
 
         # if pullup -> pressed is 1; if not pullup -> pressed is 0
-        return GPIO.input(self.pin) == self.use_pullup_config
+        return self.pin.value == self.use_pullup_config
     
 
 
 
     def __del__(self) -> None:
         '''A deconstructor to cleanup the GPIO pins after finished with object instance'''
-        GPIO.cleanup(self.pin)
+        #cleanup the pin by making it an input
+        self.pin.direction = digitalio.Direction.INPUT
