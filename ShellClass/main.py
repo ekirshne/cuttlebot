@@ -11,6 +11,6 @@ while True:
 		shell.hypnotize()
 		
 	elif command == '2':
-		shell.camouflage()
+		shell.camouflage((138, 43, 226), 1)
 		
 	command = input("Pick either 1 (hypnotize) or 2 (camouflage): ")
