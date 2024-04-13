@@ -2,6 +2,13 @@
 import numpy as np
 from random import random as rand
 
+# An example of a Q-table
+# 
+#
+#
+#
+#
+
 #Cognition class for defining cognitive abilities
 class Cognition():
 
@@ -10,11 +17,17 @@ class Cognition():
     def __init__(self):
         #Intantiate the Q_table: { "Color" : {"RUN" : Q_Value, "Approach" : Q_value} }
         self.q_table = {
+            'RED': {
+                "FORWARD" : 0, 
+                "BACK" : 0
+            },
+            'YELLOW': {
+                "FORWARD" : 0, 
+                "BACK" : 0
+            },
             'NONE' : {
-                'UP' : 0,
-                'DOWN' : 0,
-                'LEFT' : 0,
-                'RIGHT' : 0
+                'FORWARD' : 0,
+                'BACK' : 0
             }
         }
         #define a learning rate

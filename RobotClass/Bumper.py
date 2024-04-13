@@ -1,9 +1,11 @@
 from Manipulation.LimitSwitch import LimitSwitch
 import time
+from Manipulation.Claw import Claw
+
 #Note use sphero drive tank to control movement
 #Info: https://github.com/sphero-inc/sphero-sdk-raspberrypi-python/blob/master/getting_started/observer/driving/drive_tank_si.py
 
-class Bumper():
+"""class Bumper():
     def __init__(self, rvr, left_side_pin, right_side_pin, left_back_pin, right_back_pin):
         self.rvr = rvr 
         self.left_bumper = LimitSwitch(pin=left_side_pin, use_pullup_config=True)       
@@ -20,7 +22,7 @@ class Bumper():
         #Robot moves and checks if limit switched is pressed
         while True:
             if self.left_bumper.is_pressed():
-                print("First")
+                print("1")
                 self._left_bumper_pressed()
             if self.right_bumper.is_pressed():
                 print("2")
@@ -101,15 +103,16 @@ class Bumper():
             left_velocity = 0.5,
             right_velocity = 0.5
         )
+"""
 
-
-"""from Manipulation.LimitSwitch import LimitSwitch
+from Manipulation.LimitSwitch import LimitSwitch
 import time
 
 class Bumper:
-    def __init__(self, rvr, left_side_pin, right_side_pin, left_back_pin, right_back_pin):
+    def __init__(self, rvr, claw, left_side_pin, right_side_pin, left_back_pin, right_back_pin):
         self.rvr = rvr
         # Initialize with GPIO pin numbers
+        self.claw = claw
         self.left_bumper = LimitSwitch(pin=left_side_pin, use_pullup_config=True)
         self.right_bumper = LimitSwitch(pin=right_side_pin, use_pullup_config=True)
         self.left_rear_bumper = LimitSwitch(pin=left_back_pin, use_pullup_config=True)
@@ -118,27 +121,26 @@ class Bumper:
 
     def check_limit_pressed(self):
         # Check each bumper and respond accordingly
-        print("limitpressed?")
-        while True:
-            if self.left_bumper.is_pressed():
-                print("leftbump")
-                self.handle_bumper_press('left')
-                print("leftbump2")
-            if self.right_bumper.is_pressed():
-                self.handle_bumper_press('right')
-            if self.left_rear_bumper.is_pressed():
-                self.handle_bumper_press('left_rear')
-            if self.right_rear_bumper.is_pressed():
-                self.handle_bumper_press('right_rear')
+        if self.claw.right_limit_switch.is_pressed() or self.claw.left_limit_switch.is_pressed():
+            self.handle_bumper_press('front')
+        elif self.left_bumper.is_pressed():
+            self.handle_bumper_press('left')
+        elif self.right_bumper.is_pressed():
+            self.handle_bumper_press('right')
+        elif self.left_rear_bumper.is_pressed():
+            self.handle_bumper_press('left_rear')
+        elif self.right_rear_bumper.is_pressed():
+            self.handle_bumper_press('right_rear')
 
 
     def handle_bumper_press(self, bumper):
         # Handles movement based on which bumper is hit
         velocity_adjustment = {
-            'left': (0.1, 0.5),
-            'right': (0.5, 0.1),
-            'left_rear': (0.1, 0.5),
-            'right_rear': (0.5, 0.1)
+            'front': (-0.25, -0.25),
+            'left': (0.5, 0.1),
+            'right': (0.1, 0.5),
+            'left_rear': (0.25, 0.25),
+            'right_rear': (0.25, 0.25)
         }
         left_velocity, right_velocity = velocity_adjustment[bumper]
 
@@ -147,10 +149,19 @@ class Bumper:
         self.rvr.drive_tank_si_units(
                 left_velocity=left_velocity,
                 right_velocity=right_velocity)
-        while getattr(self, f"{bumper}_bumper").is_pressed() and time.time() < end_time:
-            pass
+        #CHECK NEEDS TO BE FIXED TO BE A CLEANER
+        if(bumper == "front"):
+            while (self.claw.right_limit_switch.is_pressed() or self.claw.left_limit_switch.is_pressed()) and time.time() < end_time:
+                time.sleep(0.1)
+        else:
+            while getattr(self, f"{bumper}_bumper").is_pressed() and time.time() < end_time:
+                time.sleep(0.1)
         
-        time.sleep(0.5)
+        #small delay added to ensure full release from the wall
+        time.sleep(0.25)
+
+        ##NEED TO FIND WAY TO SAVE VELOCITY BEFORE MOVEMENT TO THEN CHANGE THE VELOCITY BACK TO NORMAL AFTER A MOVE IS TAKEN
         self.rvr.drive_tank_si_units(
-            left_velocity=0.5, 
-            right_velocity=0.5)"""
+            left_velocity=0.3, 
+            right_velocity=0.3
+        )

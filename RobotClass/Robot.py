@@ -1,7 +1,8 @@
 #The robot class (for now) will be composed of the RVR+, Vision module, and claw
 import time
 import numpy as np
-import sphero_sdk as sphero
+from sphero_sdk import SpheroRvrObserver
+from sphero_sdk import RvrStreamingServices
 import cv2
 import os
 from random import choice as rand
@@ -12,14 +13,21 @@ from Bumper import Bumper
 from Shell.Shell import Shell
 import board
 
-class Robot():
+camouflage_color = (0, 0, 0)
 
+def color_detected_handler(color_detected_data):
+    global camouflage_color
+
+    print('Color detection data response: ', color_detected_data)
+    camouflage_color = (color_detected_data['ColorDetection']['R'], color_detected_data['ColorDetection']['G'], color_detected_data['ColorDetection']['B'])
+
+class Robot():
 
     #class constructor
     def __init__(self):
         #Instantiate the modules on the robot alongside the robot itself
         #First the rvr
-        self.rvr = sphero.SpheroRvrObserver()
+        self.rvr = SpheroRvrObserver()
         #give the rvr time to wake up
         self.rvr.wake()
         time.sleep(2)
@@ -32,11 +40,11 @@ class Robot():
         #Now the claw (pins 11 and 13 for the limit switches are not currently in use)
         self.claw = Claw(servo_pin=board.D17, right_limit_switch_pin=board.D27, left_limit_switch_pin=board.D22)
         #The vision module
-        #self.vision = Perception()
+        ####self.vision = Perception()
         #The Cognition module
         self.cognition = Cognition()
         #The Bumper
-        self.bumper = Bumper(self.rvr, left_side_pin=board.D24, right_side_pin=board.D16, left_back_pin=board.D25, right_back_pin=board.D20)
+        self.bumper = Bumper(self.rvr, self.claw, left_side_pin=board.D24, right_side_pin=board.D16, left_back_pin=board.D25, right_back_pin=board.D20)
         #The Shell
         self.shell = Shell()
 
@@ -48,17 +56,40 @@ class Robot():
 
             #get the color mask
             mask = self.vision.camera.get_color_mask()
+
+            # camouflage 
+            self.rvr.enable_color_detection(is_enabled=True)
+            self.rvr.sensor_control.add_sensor_data_handler(
+                service=RvrStreamingServices.color_detection,
+                handler=color_detected_handler
+            )
+            self.rvr.sensor_control.start(interval=250)
+            self.shell.camouflage(color = camouflage_color, mode=1)
+
             #If there are less than 20 active pixels
-            if np.sum(mask/255) < 50:
-                #wait and try again
-                self.shell.camouflage(color = (0, 255, 255), mode=1)
-                self.vision.pan_tilt_unit.set_servo_angles(pan_angle=10, tilt_angle=10)
-            else:
-                self.shell.camouflage(color = (255, 0, 0), mode=1)
-                self.vision.pan_tilt_unit.set_servo_angles(pan_angle=-10, tilt_angle=-10)
+            # if np.sum(mask/255) < 50:
+            #     #wait and try again
+            #     self.shell.camouflage(color = (0, 255, 255), mode=1)
+            #     self.vision.pan_tilt_unit.set_servo_angles(pan_angle=10, tilt_angle=10)
+            # else:
+            #     self.shell.camouflage(color = (255, 0, 0), mode=1)
+            #     self.vision.pan_tilt_unit.set_servo_angles(pan_angle=-10, tilt_angle=-10)
             #wait to loop again
             time.sleep(0.25)
                 
+
+    def _test_env_movement(self):
+        self.claw.set_percent_open(100)
+        time.sleep(1)
+
+        self.rvr.drive_tank_si_units(
+            left_velocity=0.3,
+            right_velocity=0.3
+        )
+        while(1):
+            self.bumper.check_limit_pressed()
+            time.sleep(0.1)
+
 
     def _test_colision_detection(self):
         '''Test bumper switch'''
@@ -1306,10 +1337,6 @@ class Robot():
                     left_velocity = -robot_proportion_angle_deg/90.0,
                     right_velocity = robot_proportion_angle_deg/90.0
                 )
-    
-
-
-    
 
     #class destructor
     def __del__(self) -> None:
@@ -1318,5 +1345,10 @@ class Robot():
         This method is automatically called when the object is no longer in use and is being destroyed.
         It closes the connection to the RVR, ensuring proper cleanup.'''
         #close the rvr
+        self.rvr.sensor_control.clear()
+
+        # Delay to allow RVR issue command before closing
+        time.sleep(.5)
+        
         self.rvr.close()
     
