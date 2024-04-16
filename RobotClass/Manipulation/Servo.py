@@ -41,8 +41,7 @@ class Servo():
 
             #Instantiate the servo at the specified pin at 50Hz
             #self.servo = GPIO.PWM(pin, 50)
-            self.servo = pwmio.PWMOut(self.pin, frequency=50)
-            self.servo.duty_cycle = 0
+            self.servo = pwmio.PWMOut(self.pin, frequency=50, duty_cycle=0)
 
         #reset the servo to its center (0 degrees) if wanted
         if reset_servo_position:
@@ -73,12 +72,18 @@ class Servo():
         if self.use_hardware_pwm:
             self.servo.change_duty_cycle(duty_cycle_pct)
         else:
-            self.servo.duty_cycle = duty_cycle_pct
+            pwmio_duty_cycle = int(duty_cycle_pct*655.35)
+            self.servo.duty_cycle = pwmio_duty_cycle
         #Update the object data members
         self.angle = angle
         self.timestamp = time.time()
 
 
+    def stop_signal(self) -> None:
+        if self.use_hardware_pwm:
+            self.servo.change_duty_cycle(0)
+        else:
+            self.servo.duty_cycle = 0
 
 
     def get_angle_deg(self) -> float:

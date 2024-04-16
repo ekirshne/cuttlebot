@@ -3,12 +3,16 @@ from Robot import Robot
 robot = Robot()
 
 #robot.forage()
+
+while(True):
+    robot._explore()
+
 #robot._test_attack(0)
 #robot._test_shell()
 #print(robot._move_and_grab_color(0)) #0=red; 30=yellow
 # robot._test_colision_detection()
 #robot._test_shell()
-robot._test_env_movement()
+#robot._test_env_movement()
 
 #robot.do_nothing() #do nothing
 

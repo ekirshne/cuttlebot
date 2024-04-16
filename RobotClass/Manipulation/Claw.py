@@ -1,5 +1,5 @@
-
 import time
+import numpy as np
 from Manipulation.LimitSwitch import LimitSwitch
 from Manipulation.Servo import Servo
 
@@ -10,12 +10,13 @@ class Claw():
     def __init__(self, servo_pin, right_limit_switch_pin, left_limit_switch_pin):
         #Initialize the object data members
         self.percent_open = None
-        self.open_bound_deg = -90
-        self.close_bound_deg = 0
+        self.open_bound_deg = -85
+        self.close_bound_deg = 5
         #Instantiate the composed objects
         self.right_limit_switch = LimitSwitch(pin=right_limit_switch_pin, use_pullup_config=True)
         self.left_limit_switch = LimitSwitch(pin=left_limit_switch_pin, use_pullup_config=True)
         self.servo = Servo(pin=servo_pin, reset_servo_position=False)
+        self.set_percent_open(50)
 
 
 
@@ -39,8 +40,16 @@ class Claw():
         #Compute the angle to move the claw's servo
         angle = self.close_bound_deg + (self.open_bound_deg - self.close_bound_deg)*(pct_open/100.0)
         self.servo.set_angle_deg(angle)
+        
+        if(self.percent_open == None):
+            delay = 2 #max delay possible (moving from 0% <-> 100%)
+        else:
+            delta_pct_open = pct_open - self.percent_open
+            delay = np.abs(delta_pct_open)/50.0 #about 75%/sec movement speed
+            delay = min(delay*1.2, 2.0)
+        time.sleep(delay)
         self.percent_open = pct_open
-
+        self.servo.stop_signal()
 
 
 
@@ -86,8 +95,8 @@ class Claw():
             if self.is_object_captured():
                 break
             #sleep for short amount of time and decrease percent openess
-            time.sleep(0.02)
-            open_percent -= 1
+            time.sleep(0.01)
+            open_percent -= 5
 
 
 
@@ -109,5 +118,5 @@ class Claw():
             if self.is_object_fully_released():
                 break
             #sleep for short amount of time and increment percent openess
-            time.sleep(0.02)
-            open_percent += 1
+            time.sleep(0.01)
+            open_percent += 5

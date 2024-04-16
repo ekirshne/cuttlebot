@@ -17,14 +17,6 @@ class Cognition():
     def __init__(self):
         #Intantiate the Q_table: { "Color" : {"RUN" : Q_Value, "Approach" : Q_value} }
         self.q_table = {
-            'RED': {
-                "FORWARD" : 0, 
-                "BACK" : 0
-            },
-            'YELLOW': {
-                "FORWARD" : 0, 
-                "BACK" : 0
-            },
             'NONE' : {
                 'FORWARD' : 0,
                 'BACK' : 0
@@ -88,7 +80,7 @@ class Cognition():
         #loop through each color
         for color in colors_in_view:
             #try to access the color from the q_table
-            try:
+            if color in self.q_table:
                 #get the min value from approach and run
                 current_color_min_q_value = min(self.q_table[color]["RUN"], self.q_table[color]["APPROACH"])
                 #update the most punishing color if the possible punishment is lower than before
@@ -99,7 +91,7 @@ class Cognition():
                     most_punishing_color = color
                     min_value = current_color_min_q_value
             #if color does not exist in q_table, then add it in
-            except:
+            else:
                 self.q_table[color] = {
                     'RUN' : 0, 
                     'APPROACH' : 0

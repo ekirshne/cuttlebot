@@ -5,7 +5,7 @@ from sphero_sdk import SpheroRvrObserver
 from sphero_sdk import RvrStreamingServices
 import cv2
 import os
-from random import choice as rand
+import random
 from Manipulation.Claw import Claw
 from Vision.Perception import Perception
 from Cognition.Cognition import Cognition
@@ -40,7 +40,7 @@ class Robot():
         #Now the claw (pins 11 and 13 for the limit switches are not currently in use)
         self.claw = Claw(servo_pin=board.D17, right_limit_switch_pin=board.D27, left_limit_switch_pin=board.D22)
         #The vision module
-        ####self.vision = Perception()
+        self.vision = Perception()
         #The Cognition module
         self.cognition = Cognition()
         #The Bumper
@@ -58,6 +58,7 @@ class Robot():
             mask = self.vision.camera.get_color_mask()
 
             # camouflage 
+            # How to work with RVR's color detection: https://sdk.sphero.com/raspberry-pi-setup/how-to-use-raspberry-pi-sdk#h.vkbuw821vfgr
             self.rvr.enable_color_detection(is_enabled=True)
             self.rvr.sensor_control.add_sensor_data_handler(
                 service=RvrStreamingServices.color_detection,
@@ -80,15 +81,8 @@ class Robot():
 
     def _test_env_movement(self):
         self.claw.set_percent_open(100)
-        time.sleep(1)
-
-        self.rvr.drive_tank_si_units(
-            left_velocity=0.3,
-            right_velocity=0.3
-        )
-        while(1):
-            self.bumper.check_limit_pressed()
-            time.sleep(0.1)
+        self.bumper.move_with_check(left_velocity=0.3, right_velocity=0.3, distance_m=5)
+        print("All Done!")
 
 
     def _test_colision_detection(self):
@@ -104,18 +98,18 @@ class Robot():
         the robot to turn to that angle using the drive_to_position_si method of the 
         RVR object. It then pauses execution for 5 seconds to allow the robot to turn.'''
 
-        random_val = rand([90, 0, -90])
-        self.rvr.drive_to_position_si(
-            yaw_angle=random_val,
-            x=0,
-            y=0,
-            linear_speed=0.25,
-            flags=0
+        random_turn = int(random.uniform(-179, 179))
+        self.rvr.drive_control.turn_left_degrees(
+            heading=0,  # Valid heading values are 0-359
+            amount=random_turn
         )
-        time.sleep(5)
-
-
-
+        time.sleep(1)
+        random_move = random.uniform(-1, 1)
+        self.bumper.move_with_check(
+            left_velocity=0.3,
+            right_velocity=0.3,
+            distance_m=random_move
+        )
 
     def _run(self) -> None:
         '''Commands the robot to run forward for a short duration.
@@ -196,9 +190,6 @@ class Robot():
                     left_velocity = curr_left_velocity,
                     right_velocity = curr_right_velocity
                 )
-
-
-
 
     def _stalk(self, color: str) -> float: #float | None:
         '''Attempts to stalk an object of the specified color.
@@ -304,9 +295,6 @@ class Robot():
         print(obj_depth)
         return obj_depth
 
-
-
-
     def _test_attack(self, color: str) -> None:
         '''Tests the robot's attack mechanism against an object of the specified color.
 
@@ -356,9 +344,6 @@ class Robot():
         reward = self._move_and_grab_color(color)
         print(f"Reward = {reward}")
 
-
-
-
     def _perform_action(self, action: str, color: str) -> float:
         '''Performs the specified action.
 
@@ -391,7 +376,6 @@ class Robot():
         self.vision.pan_tilt_unit.set_servo_angles(0, 0)
         return reward
 
-
     #see color and perform action
     def forage(self):
         #initiallize a color dictionary: assign a string to a hue value
@@ -402,7 +386,7 @@ class Robot():
             #"BLUE": 120,
         }
         #loop forever and keep updating values
-        self._explore()
+        self._explore() # Rotate to a random direction
         counter = 1
         while(1):
             #Get list of colors in view of the camera
@@ -412,7 +396,7 @@ class Robot():
                 #explore: rotate to a random direction and see if any pictures were found again
                 self._explore()
                 continue
-            #Define the state of the robot: prioritize state with the most negative possible outcome
+            #Define the state of the robot: prioritize state with the most negative possible outcome (i.e. if the robot sees a prey and predator at the same time, it will prioritize to run away from the predator. But if the robot only sees one color in its view, it will always return that color as the state)
             #state = self.cognition.get_state_with_largest_view(colors_in_view)
             state = self.cognition.get_state_with_largest_punishment(colors_in_view)
             action = self.cognition.get_action(state)
@@ -434,9 +418,6 @@ class Robot():
                 self.cognition.print_q_table()
             #update the counter
             counter += 1
-
-
-
 
     def _move_and_grab_color(self, color: str) -> int:
         '''Moves the robot towards an object of the specified color and attempts to grab it.
@@ -1351,4 +1332,5 @@ class Robot():
         time.sleep(.5)
         
         self.rvr.close()
+
     
