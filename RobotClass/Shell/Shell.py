@@ -14,6 +14,7 @@ class Shell():
         self.hypnotize_secondary_color = (0, 10, 10)   #black
 
         self.camouflage_color = (138, 43, 226)
+        self.blanching_color = (255, 255, 255)
 
     #hypnotize feature
     def hypnotize(self):
@@ -47,6 +48,14 @@ class Shell():
             """
         
         time.sleep(0.1)
+
+    #blanching feature
+    def blanching(self, color):
+        #blanching/flashing white
+        self.led.fill(self.blanching_color)
+        time.sleep(1)
+        #changes back to camouflage color
+        self.camouflage(color, 1)
 
     #turns off the lights on the shell
     def turn_off_shell(self):

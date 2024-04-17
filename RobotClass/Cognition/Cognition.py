@@ -1,6 +1,7 @@
 #import needed libraries
 import numpy as np
 from random import random as rand
+import csv
 
 # An example of a Q-table
 # 
@@ -125,7 +126,7 @@ class Cognition():
             }
             run_approach_q_value_list = np.array([self.q_table[state]['RUN'], self.q_table[state]['APPROACH']])
         
-        run_approach_probabilities = self._softmax(run_approach_q_value_list)
+        run_approach_probabilities = self._softmax(run_approach_q_value_list) # Action selection policy
         random_value = rand()
         print(f"probs: {run_approach_probabilities}")
         print(f"val: {random_value}")
@@ -167,8 +168,6 @@ class Cognition():
         return max_q
     
 
-
-
     def update_q_table(self, state: str, action: str, reward: float, new_state: str) -> None:
         '''Updates the Q-table based on the Q-learning algorithm.
 
@@ -179,5 +178,20 @@ class Cognition():
 
         #q-learning update rule: use max possible q value of actions at the current state
         print(f"Updating Q-Table: {state}, {action}")
-        self.q_table[state][action] += self.learning_rate * (reward + self.discount_factor * self.get_max_q_at_state(new_state) - self.q_table[state][action])
+        self.q_table[state][action] += self.learning_rate * (reward + self.discount_factor * self.get_max_q_at_state(new_state) - self.q_table[state][action]) # Q = Q + lr * (reward + discount * max{Q_next} - Q) https://huggingface.co/blog/deep-rl-q-part2
+       
+        # Save data into a CSV file 
+        data = [] # Initialize the data to be written
+        # e.g. [
+            # ['name', 'age'],
+            # ['John Doe', 30],
+            # ['Jane Doe', 28]
+        # ]
+        # for state, action, q_value in self.q_table:
+            
+        
+        # with open('data.csv', 'w', newline='') as file:
+        #     writer = csv.writer(file)
+        #     writer.writerows(data)
+
         print(f"\tChanged to {self.q_table[state][action]}")

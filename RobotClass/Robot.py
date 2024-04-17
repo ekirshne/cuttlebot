@@ -18,7 +18,7 @@ camouflage_color = (0, 0, 0)
 def color_detected_handler(color_detected_data):
     global camouflage_color
 
-    print('Color detection data response: ', color_detected_data)
+    #print('Color detection data response: ', color_detected_data)
     camouflage_color = (color_detected_data['ColorDetection']['R'], color_detected_data['ColorDetection']['G'], color_detected_data['ColorDetection']['B'])
 
 class Robot():
@@ -47,6 +47,12 @@ class Robot():
         self.bumper = Bumper(self.rvr, self.claw, left_side_pin=board.D24, right_side_pin=board.D16, left_back_pin=board.D25, right_back_pin=board.D20)
         #The Shell
         self.shell = Shell()
+        self.shell.camouflage(color = (0,0,0), mode=1)
+        time.sleep(1)
+
+    def _test_claw(self):
+        self.claw.set_percent_open(100)
+        self.claw.set_percent_open(0)
 
     def _test_shell(self):
         self.vision.camera.set_color_filter(0, precision=15)
@@ -55,7 +61,7 @@ class Robot():
             #time.sleep(5)
 
             #get the color mask
-            mask = self.vision.camera.get_color_mask()
+            #mask = self.vision.camera.get_color_mask()
 
             # camouflage 
             # How to work with RVR's color detection: https://sdk.sphero.com/raspberry-pi-setup/how-to-use-raspberry-pi-sdk#h.vkbuw821vfgr
@@ -66,6 +72,9 @@ class Robot():
             )
             self.rvr.sensor_control.start(interval=250)
             self.shell.camouflage(color = camouflage_color, mode=1)
+            #time.sleep(3)
+            #self.rvr.enable_color_detection(is_enabled=False)
+            #time.sleep(3)
 
             #If there are less than 20 active pixels
             # if np.sum(mask/255) < 50:
@@ -90,7 +99,6 @@ class Robot():
         self.bumper.check_limit_pressed()
         # self.bumper.check_limit_pressed()
 
-
     def _explore(self) -> None:
         '''Randomly turns the robot to -90, 0, or 90 degrees.
         
@@ -98,20 +106,63 @@ class Robot():
         the robot to turn to that angle using the drive_to_position_si method of the 
         RVR object. It then pauses execution for 5 seconds to allow the robot to turn.'''
 
+        self._explore_turn()
+        
+        time.sleep(1)
+        self._explore_move
+
+    def _explore_turn(self) -> None:
         random_turn = int(random.uniform(-179, 179))
         self.rvr.drive_control.turn_left_degrees(
             heading=0,  # Valid heading values are 0-359
             amount=random_turn
         )
-        time.sleep(1)
+
+    def _explore_move(self) -> None:
         random_move = random.uniform(-1, 1)
         self.bumper.move_with_check(
             left_velocity=0.3,
             right_velocity=0.3,
             distance_m=random_move
         )
+        
+    def _run_blanch(self) -> None:
+        self.rvr.enable_color_detection(is_enabled=True)
+        self.rvr.sensor_control.add_sensor_data_handler(
+            service=RvrStreamingServices.color_detection,
+            handler=color_detected_handler
+        )
+        self.rvr.sensor_control.start(interval=500)
 
-    def _run(self) -> None:
+        self.rvr.drive_tank_si_units(
+            left_velocity = -0.5,
+            right_velocity = -0.5
+        )
+        
+        self.shell.blanching(color = camouflage_color)
+
+        time_wait = 1
+        current_time = time.time()
+        while(time.time()-current_time < time_wait):
+            if(self.bumper.check_limit_pressed()):
+                self.rvr.drive_tank_si_units(
+                    left_velocity = -0.5,
+                    right_velocity = -0.5
+                )
+
+        #Stop and then turn around
+        self.rvr.drive_tank_si_units(
+            left_velocity = 0,
+            right_velocity = 0
+        )
+
+        self.rvr.enable_color_detection(is_enabled=False)
+        self.rvr.sensor_control.stop()
+
+        self.shell.camouflage(color = (0,0,0), mode=1)
+        
+
+    def _run_camo(self) -> None:
         '''Commands the robot to run forward for a short duration.
         
         This function drives the robot forward by setting both left and right wheel velocities 
@@ -119,15 +170,43 @@ class Robot():
         drive_tank_si_units method of the RVR object. After a brief period of 0.25 seconds, 
         it stops the robot by setting both velocities to 0.'''
 
-        self.rvr.drive_tank_si_units(
-            left_velocity = -0.5,
-            right_velocity = -0.5
+        self.rvr.enable_color_detection(is_enabled=True)
+        self.rvr.sensor_control.add_sensor_data_handler(
+            service=RvrStreamingServices.color_detection,
+            handler=color_detected_handler
         )
-        time.sleep(0.25)
+        self.rvr.sensor_control.start(interval=500)
+        
+        self.rvr.drive_tank_si_units(
+            left_velocity = -0.15,
+            right_velocity = -0.15
+        )
+        time_wait = 5
+        current_time = time.time()
+        while(time.time()-current_time < time_wait):
+            self.shell.camouflage(color = camouflage_color, mode=1)
+            if(self.bumper.check_limit_pressed()):
+                self.rvr.drive_tank_si_units(
+                    left_velocity = -0.15,
+                    right_velocity = -0.15
+                )
+
+        self.rvr.enable_color_detection(is_enabled=False)
+        self.rvr.sensor_control.stop()
+
+        #Stop and then turn around
         self.rvr.drive_tank_si_units(
             left_velocity = 0,
             right_velocity = 0
         )
+        self.rvr.drive_control.reset_heading()
+        time.sleep(1)
+        self.rvr.drive_control.turn_left_degrees(
+            heading=0,  # Valid heading values are 0-359
+            amount=180
+        )
+
+        self.shell.camouflage(color = (0,0,0), mode=1)
 
 
 
@@ -182,6 +261,7 @@ class Robot():
                     left_velocity = 0,
                     right_velocity = 0
                 )
+                print("STOP!")
                 return
 
             #if not, keep updating speed
@@ -294,6 +374,20 @@ class Robot():
         )
         print(obj_depth)
         return obj_depth
+    
+    def _pounce(self, color: str, depth: float) -> float: #float | None:)
+        #case after object
+        velocity = 1.15
+        self.rvr.drive_tank_si_units(
+            left_velocity = velocity,
+            right_velocity = velocity
+        )
+        distance_offset = 0.15 #m
+        time.sleep((depth-distance_offset)/velocity)
+
+        #transition into move and grab code
+        reward = self._move_and_grab_color(color)
+        return(reward)
 
     def _test_attack(self, color: str) -> None:
         '''Tests the robot's attack mechanism against an object of the specified color.
@@ -312,37 +406,25 @@ class Robot():
             print("FAIL!")
             return
         self.claw.set_percent_open(90)
-        time.sleep(1.0)
-        
-        '''
-        self.claw.set_percent_open(80)
-        self.rvr.reset_yaw()
         time.sleep(0.1)
-        self.rvr.reset_locator_x_and_y()
-        time.sleep(0.1)
-        self.rvr.drive_to_position_si(
-            yaw_angle = 0,
-            x=0,
-            y=depth,
-            linear_speed=1.5,
-            flags=0
-        )
-        time.sleep(3)
-        self.claw.capture_object()
-        '''
-        
-        #case after object
-        velocity = 1.15
-        self.rvr.drive_tank_si_units(
-            left_velocity = velocity,
-            right_velocity = velocity
-        )
-        distance_offset = 0.15 #m
-        time.sleep((depth-distance_offset)/velocity)
-
-        #transition into move and grab code
-        reward = self._move_and_grab_color(color)
+        reward = self._pounce(color, depth)
         print(f"Reward = {reward}")
+
+    def _approach(self, color: str) -> float:
+        self._align(color)
+        depth = self._stalk(color)
+        print(f"depth = {depth}")
+        if depth == None:
+            return None
+        self.claw.set_percent_open(90)
+        time.sleep(0.1)
+        reward = self._pounce(color, depth)
+        return(reward)
+
+    def _get_blanching_probability(self, area):
+        return(
+            1 / (1 + -0.05*(np.exp(area-150)))
+        )
 
     def _perform_action(self, action: str, color: str) -> float:
         '''Performs the specified action.
@@ -355,8 +437,7 @@ class Robot():
         received for the action.'''
 
         if action == 'APPROACH':
-            self._align(color)
-            reward = self._move_and_grab_color(color)
+            reward = self._approach(color)
             self.claw.release_object()
             self.rvr.drive_tank_si_units(
                 left_velocity = -0.1,
@@ -369,7 +450,18 @@ class Robot():
             )
         #run away
         elif action == 'RUN':
-            self._run()
+            #get the current view of the robot
+            image = self.vision.camera.get_image()
+            bounding_box = self.vision.get_bounding_box_for_color_in_image(image, color)
+            bb_width = bounding_box[2]
+            p_blanching = self._get_blanching_probability(bb_width)
+            if(random.random() < p_blanching):
+                #blanch and then camo
+                self._run_blanch()
+                self._run_camo()
+            else:
+                #only camo
+                self._run_camo()
             time.sleep(1)
             reward = 0
         #return to center and reset camera
@@ -386,7 +478,7 @@ class Robot():
             #"BLUE": 120,
         }
         #loop forever and keep updating values
-        self._explore() # Rotate to a random direction
+        #self._explore() # Rotate to a random direction
         counter = 1
         while(1):
             #Get list of colors in view of the camera
@@ -394,28 +486,26 @@ class Robot():
             #Check if any colors were found
             if(len(colors_in_view) == 0):
                 #explore: rotate to a random direction and see if any pictures were found again
-                self._explore()
+                self._explore_turn()
+            #Check for colors after turning the robot
+            colors_in_view = self.vision.get_colors_in_view(color_dict)
+            #Check if any colors were found
+            if(len(colors_in_view) == 0):
+                #explore: rotate to a random direction and see if any pictures were found again
+                self._explore_move()
                 continue
-            #Define the state of the robot: prioritize state with the most negative possible outcome (i.e. if the robot sees a prey and predator at the same time, it will prioritize to run away from the predator. But if the robot only sees one color in its view, it will always return that color as the state)
+
+            # Define the state of the robot: prioritize state with the most negative possible outcome (i.e. if the robot sees a prey and predator at the same time, it will prioritize to run away from the predator. But if the robot only sees one color in its view, it will always return that color as the state)
             #state = self.cognition.get_state_with_largest_view(colors_in_view)
             state = self.cognition.get_state_with_largest_punishment(colors_in_view)
             action = self.cognition.get_action(state)
             reward = self._perform_action(action, color=color_dict[state])
             new_state = self.cognition.get_new_state(state, action)
             self.cognition.update_q_table(state, action, reward, new_state)
-            self.claw.set_percent_open(50)
-            self.rvr.drive_to_position_si(
-                yaw_angle=0,
-                x=0,
-                y=0,
-                linear_speed=0.25,
-                flags=0
-            )
-            time.sleep(7)
-            #print the Q-table every 5th run
-            if(counter % 5 == 0):
-                print(f"Result After Trial #{counter}:")
-                self.cognition.print_q_table()
+            #save the current Q-table
+            # if(counter % 5 == 0):
+            #     print(f"Result After Trial #{counter}:")
+            #     self.cognition.print_q_table()
             #update the counter
             counter += 1
 
@@ -1325,6 +1415,9 @@ class Robot():
 
         This method is automatically called when the object is no longer in use and is being destroyed.
         It closes the connection to the RVR, ensuring proper cleanup.'''
+        #Turn off the shell LEDs
+        self.shell.camouflage(color = (0,0,0), mode=1)
+        
         #close the rvr
         self.rvr.sensor_control.clear()
 

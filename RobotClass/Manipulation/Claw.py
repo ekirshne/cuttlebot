@@ -47,6 +47,8 @@ class Claw():
             delta_pct_open = pct_open - self.percent_open
             delay = np.abs(delta_pct_open)/50.0 #about 75%/sec movement speed
             delay = min(delay*1.2, 2.0)
+
+        print(angle, delay)
         time.sleep(delay)
         self.percent_open = pct_open
         self.servo.stop_signal()

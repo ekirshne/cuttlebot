@@ -16,6 +16,20 @@ class Perception():
 
 
 
+    def get_bounding_box_for_color_in_image(self, image, color, precision=15):
+        #set the color filter and get the mask in the picture
+        self.camera.set_color_filter(color, precision)
+        color_mask = self.camera.color_filter.get_color_filter_mask(image)
+        #condition 1: the mask must have possibly found an object (more than 20 active pixels)
+        if(np.sum(color_mask/255) == 0):
+            return(None)
+        #get the width of the bounding box of the largest countour
+        largest_contour = self.get_largest_contour(color_mask)
+        largest_contour_bounding_box = self.get_contour_bounding_box(largest_contour)
+        return(largest_contour_bounding_box)
+
+
+
 
     def get_colors_in_view(self, color_dict: dict[str, int], precision: int=15) -> list[str]:
         '''Determine if the defined colors passed to the function are in view of the camera.

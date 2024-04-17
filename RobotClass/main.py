@@ -1,11 +1,19 @@
 from Robot import Robot
+import time
 
 robot = Robot()
 
-#robot.forage()
+robot.forage()
 
-while(True):
-    robot._explore()
+#while(1):
+#    robot.bumper.move_with_check(0.3, 0.3, 5)
+#    time.sleep(3)
+
+#while(1):
+#    robot._test_claw()
+
+#while(True):
+#    robot._run()
 
 #robot._test_attack(0)
 #robot._test_shell()
