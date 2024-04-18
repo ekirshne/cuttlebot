@@ -2,33 +2,39 @@
 import numpy as np
 from random import random as rand
 import csv
-
-# An example of a Q-table
-# 
-#
-#
-#
-#
+import datetime
 
 #Cognition class for defining cognitive abilities
 class Cognition():
-
-
     #Cognition class constructor
-    def __init__(self):
-        #Intantiate the Q_table: { "Color" : {"RUN" : Q_Value, "Approach" : Q_value} }
-        self.q_table = {
-            'NONE' : {
-                'FORWARD' : 0,
-                'BACK' : 0
+    def __init__(self, color_dict):
+        # Initialize the Q_table
+        self.q_table = dict()
+        for color in color_dict:
+            self.q_table[color] = {
+                'RUN': 0,
+                'APPROACH': 0
             }
+        self.q_table['NONE'] = {
+            'FORWARD' : 0,
+            'BACK' : 0
         }
+
         #define a learning rate
         self.learning_rate = 0.2
         #define a discount factor
         self.discount_factor = 0.9
 
-
+        # Create the CSV file and record learning rate and the discount factor info
+        self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.datetime.now())
+        initial_data = [
+            ['Learning Rate', self.learning_rate],
+            ['Discount Factor', self.discount_factor],
+            []
+        ]
+        with open(f'/home/cuttlebot/cuttlebot/experiment_results/q_values_{self.timestamp}.csv', 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(initial_data)
 
 
     def print_q_table(self) -> None:
@@ -179,19 +185,16 @@ class Cognition():
         #q-learning update rule: use max possible q value of actions at the current state
         print(f"Updating Q-Table: {state}, {action}")
         self.q_table[state][action] += self.learning_rate * (reward + self.discount_factor * self.get_max_q_at_state(new_state) - self.q_table[state][action]) # Q = Q + lr * (reward + discount * max{Q_next} - Q) https://huggingface.co/blog/deep-rl-q-part2
-       
-        # Save data into a CSV file 
-        data = [] # Initialize the data to be written
-        # e.g. [
-            # ['name', 'age'],
-            # ['John Doe', 30],
-            # ['Jane Doe', 28]
-        # ]
-        # for state, action, q_value in self.q_table:
-            
-        
-        # with open('data.csv', 'w', newline='') as file:
-        #     writer = csv.writer(file)
-        #     writer.writerows(data)
 
         print(f"\tChanged to {self.q_table[state][action]}")
+
+        # Record the Q values into the CSV file 
+        data = [
+            ['', 'APPROACH', 'RUN'],
+            ['BLUE', self.q_table['BLUE']['APPROACH'], self.q_table['BLUE']['RUN']],
+            ['GREEN', self.q_table['GREEN']['APPROACH'], self.q_table['GREEN']['RUN']],
+            [] # Add an empty line in the CSV file between each Q table update
+        ]
+        with open(f'/home/cuttlebot/cuttlebot/experiment_results/q_values_{self.timestamp}.csv', 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(data)

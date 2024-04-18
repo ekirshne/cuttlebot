@@ -56,12 +56,23 @@ class PID_2D():
         #check to ensure the duty cycles are within the valid range (2.5, 12.5)
         servos = [servo1, servo2]
         for i in range(len(self.PWM_duty_cycles)):
-            #case for PWM too low
-            if(self.PWM_duty_cycles[i] < 2.5):
-                servos[i].change_duty_cycle(2.5)
-            #case for PWM too high
-            elif(self.PWM_duty_cycles[i] > 12.5):
-                servos[i].change_duty_cycle(12.5)
-            #case for valid PWM signal
-            else:
-                servos[i].change_duty_cycle(self.PWM_duty_cycles[i])
+            if(i == 0): #pan
+                #case for PWM too low
+                if(self.PWM_duty_cycles[i] < 5.0): #-45 deg min
+                    servos[i].change_duty_cycle(2.5)
+                #case for PWM too high
+                elif(self.PWM_duty_cycles[i] > 10.0): #+45 deg max
+                    servos[i].change_duty_cycle(10.0)
+                #case for valid PWM signal
+                else:
+                    servos[i].change_duty_cycle(self.PWM_duty_cycles[i])
+            elif(i==1): #tilt
+                #case for PWM too low
+                if(self.PWM_duty_cycles[i] < 6.25): #-22.5 deg min
+                    servos[i].change_duty_cycle(6.25)
+                #case for PWM too high
+                elif(self.PWM_duty_cycles[i] > 8.75): #+22.5 deg max
+                    servos[i].change_duty_cycle(8.75)
+                #case for valid PWM signal
+                else:
+                    servos[i].change_duty_cycle(self.PWM_duty_cycles[i])

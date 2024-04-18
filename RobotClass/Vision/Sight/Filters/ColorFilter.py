@@ -25,16 +25,16 @@ class ColorFilter():
             raise(ValueError("Invalid input for either hue or precision"))
         #Set the filter for hue ranges wrapping from 0 -> 180
         if hue - precision < 0:
-            self.lower_bound_filter_range = (np.uint8([(hue-precision)+180, 170, 136]), np.uint8([180, 255, 255]))
-            self.upper_bound_filter_range = (np.uint8([0, 170, 136]), np.uint8([hue+precision, 255, 255]))
+            self.lower_bound_filter_range = (np.uint8([(hue-precision)+180, 160, 65]), np.uint8([180, 255, 255]))
+            self.upper_bound_filter_range = (np.uint8([0, 160, 65]), np.uint8([hue+precision, 255, 255]))
         #Set the filter for hue ranges wrapping from 180 -> 0
         elif hue + precision >= 180:
-            self.lower_bound_filter_range = (np.uint8([hue-precision, 170, 136]), np.uint8([180, 255, 255]))
-            self.upper_bound_filter_range = (np.uint8([0, 170, 136]), np.uint8([(hue+precision)-180, 255, 255]))
+            self.lower_bound_filter_range = (np.uint8([hue-precision, 160, 65]), np.uint8([180, 255, 255]))
+            self.upper_bound_filter_range = (np.uint8([0, 160, 65]), np.uint8([(hue+precision)-180, 255, 255]))
         #Set the filter for hue ranges when there is no wrapping involved
         else:
-            self.lower_bound_filter_range = (np.uint8([hue-precision, 170, 136]), np.uint8([hue, 255, 255]))
-            self.upper_bound_filter_range = (np.uint8([hue, 170, 136]), np.uint8([hue+precision, 255, 255]))
+            self.lower_bound_filter_range = (np.uint8([hue-precision, 160, 65]), np.uint8([hue, 255, 255]))
+            self.upper_bound_filter_range = (np.uint8([hue, 160, 65]), np.uint8([hue+precision, 255, 255]))
 
 
 

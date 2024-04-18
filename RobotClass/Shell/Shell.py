@@ -11,10 +11,29 @@ class Shell():
 
         self.wave_frequency = 0.1
         self.hypnotize_main_color = (255, 165, 0)   #orange
-        self.hypnotize_secondary_color = (0, 10, 10)   #black
+        self.hypnotize_secondary_color = (5, 10, 10)   #black
 
         self.camouflage_color = (138, 43, 226)
-        self.blanching_color = (255, 255, 255)
+        self.blanching_color = (200, 200, 200)
+
+        self.hypnosis_row_index = 0
+
+    def start_hypnosis(self):
+        self.led.fill(self.hypnotize_main_color)
+
+    def next_hypnosis_step(self):
+        start_index = 0
+        for i in range(len(self.row_led_count_back2front)):
+            #filling the shell with the main color unless off color row seen
+            if(i%3 == self.hypnosis_row_index%3):
+                for led_index in range(start_index, start_index + self.row_led_count_back2front[i]):
+                    self.led[led_index] = self.hypnotize_secondary_color
+            else:
+                for led_index in range(start_index, start_index + self.row_led_count_back2front[i]):
+                    self.led[led_index] = self.hypnotize_main_color
+            start_index += self.row_led_count_back2front[i]
+
+        self.hypnosis_row_index = (self.hypnosis_row_index + 1) % len(self.row_led_count_back2front)
 
     #hypnotize feature
     def hypnotize(self):
@@ -50,12 +69,11 @@ class Shell():
         time.sleep(0.1)
 
     #blanching feature
-    def blanching(self, color):
+    def blanching(self):
         #blanching/flashing white
         self.led.fill(self.blanching_color)
-        time.sleep(1)
         #changes back to camouflage color
-        self.camouflage(color, 1)
+        #self.camouflage(color, 1)
 
     #turns off the lights on the shell
     def turn_off_shell(self):

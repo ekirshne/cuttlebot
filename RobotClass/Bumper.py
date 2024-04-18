@@ -1,5 +1,6 @@
 from Manipulation.LimitSwitch import LimitSwitch
 import time
+import numpy as np
 from Manipulation.Claw import Claw
 
 #Note use sphero drive tank to control movement
@@ -130,7 +131,7 @@ class Bumper:
         )
         
         avg_velocity = (left_velocity+right_velocity)/2.0
-        time_to_move_distance = distance_m/avg_velocity
+        time_to_move_distance = np.abs(distance_m/avg_velocity)
         current_time = time.time()
         while(time_to_move_distance > time.time()-current_time):
             time.sleep(0.1)

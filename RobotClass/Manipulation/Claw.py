@@ -45,13 +45,13 @@ class Claw():
             delay = 2 #max delay possible (moving from 0% <-> 100%)
         else:
             delta_pct_open = pct_open - self.percent_open
-            delay = np.abs(delta_pct_open)/50.0 #about 75%/sec movement speed
-            delay = min(delay*1.2, 2.0)
+            delay = np.abs(delta_pct_open)/50.0 #about 50%/sec movement speed
+            delay = min(delay*1.5, 2.0)
 
-        print(angle, delay)
+        #print(angle, delay)
         time.sleep(delay)
         self.percent_open = pct_open
-        self.servo.stop_signal()
+        #self.servo.stop_signal()
 
 
 
@@ -65,7 +65,7 @@ class Claw():
     def is_object_captured(self) -> bool:
         '''This function looks at the states of the right and left limit switches and
         returns True if both are pressed and False otherwise.'''
-        return self.right_limit_switch.is_pressed() and self.left_limit_switch.is_pressed()
+        return self.right_limit_switch.is_pressed() or self.left_limit_switch.is_pressed()
     
 
 
@@ -97,8 +97,8 @@ class Claw():
             if self.is_object_captured():
                 break
             #sleep for short amount of time and decrease percent openess
-            time.sleep(0.01)
-            open_percent -= 5
+            time.sleep(0.025)
+            open_percent -= 10
 
 
 

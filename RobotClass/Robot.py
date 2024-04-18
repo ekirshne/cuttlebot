@@ -41,8 +41,18 @@ class Robot():
         self.claw = Claw(servo_pin=board.D17, right_limit_switch_pin=board.D27, left_limit_switch_pin=board.D22)
         #The vision module
         self.vision = Perception()
+        
+        #disable the Pan-tilt-unit due to faulty performance
+        self.vision.pan_tilt_unit.set_servo_PWM_duty_cycles(0, 0)
+        
         #The Cognition module
-        self.cognition = Cognition()
+        #initiallize a color dictionary: assign a string to a hue value
+        self.color_dict = {
+            #"RED" : 175,
+            "GREEN" : 40, # intended Predator
+            "BLUE": 110 # intended Prey
+        }
+        self.cognition = Cognition(self.color_dict)
         #The Bumper
         self.bumper = Bumper(self.rvr, self.claw, left_side_pin=board.D24, right_side_pin=board.D16, left_back_pin=board.D25, right_back_pin=board.D20)
         #The Shell
@@ -55,7 +65,7 @@ class Robot():
         self.claw.set_percent_open(0)
 
     def _test_shell(self):
-        self.vision.camera.set_color_filter(0, precision=15)
+        self.vision.camera.set_color_filter(0, precision=10)
         while(1):
             #self.shell.hypnotize()
             #time.sleep(5)
@@ -119,7 +129,7 @@ class Robot():
         )
 
     def _explore_move(self) -> None:
-        random_move = random.uniform(-1, 1)
+        random_move = random.uniform(-0.5, 0.5)
         self.bumper.move_with_check(
             left_velocity=0.3,
             right_velocity=0.3,
@@ -127,39 +137,25 @@ class Robot():
         )
         
     def _run_blanch(self) -> None:
-        self.rvr.enable_color_detection(is_enabled=True)
-        self.rvr.sensor_control.add_sensor_data_handler(
-            service=RvrStreamingServices.color_detection,
-            handler=color_detected_handler
-        )
-        self.rvr.sensor_control.start(interval=500)
-
         self.rvr.drive_tank_si_units(
             left_velocity = -0.5,
             right_velocity = -0.5
         )
         
-        self.shell.blanching(color = camouflage_color)
+        self.shell.blanching()
 
-        time_wait = 1
+        time_wait = 0.3
         current_time = time.time()
         while(time.time()-current_time < time_wait):
             if(self.bumper.check_limit_pressed()):
-                self.rvr.drive_tank_si_units(
-                    left_velocity = -0.5,
-                    right_velocity = -0.5
-                )
+                break
 
         #Stop and then turn around
         self.rvr.drive_tank_si_units(
             left_velocity = 0,
             right_velocity = 0
         )
-
-        self.rvr.enable_color_detection(is_enabled=False)
-        self.rvr.sensor_control.stop()
-
-        self.shell.camouflage(color = (0,0,0), mode=1)
+        time.sleep(0.1)
         
 
     def _run_camo(self) -> None:
@@ -170,6 +166,7 @@ class Robot():
         drive_tank_si_units method of the RVR object. After a brief period of 0.25 seconds, 
         it stops the robot by setting both velocities to 0.'''
 
+        ####we should make it so that the shell object creates these threads
         self.rvr.enable_color_detection(is_enabled=True)
         self.rvr.sensor_control.add_sensor_data_handler(
             service=RvrStreamingServices.color_detection,
@@ -181,7 +178,9 @@ class Robot():
             left_velocity = -0.15,
             right_velocity = -0.15
         )
-        time_wait = 5
+
+        #WE COULD MAYBE DO SOMETHING WHERE IT BACKS UP UNTIL THE PREDITOR IS NO LONGER IN RANGE OF ITS SIGHT (USE BB_Y VALUE)
+        time_wait = 2.5
         current_time = time.time()
         while(time.time()-current_time < time_wait):
             self.shell.camouflage(color = camouflage_color, mode=1)
@@ -191,47 +190,48 @@ class Robot():
                     right_velocity = -0.15
                 )
 
-        self.rvr.enable_color_detection(is_enabled=False)
-        self.rvr.sensor_control.stop()
-
         #Stop and then turn around
         self.rvr.drive_tank_si_units(
             left_velocity = 0,
             right_velocity = 0
         )
         self.rvr.drive_control.reset_heading()
-        time.sleep(1)
+        time.sleep(0.5)
         self.rvr.drive_control.turn_left_degrees(
             heading=0,  # Valid heading values are 0-359
             amount=180
         )
 
-        self.shell.camouflage(color = (0,0,0), mode=1)
+        self.rvr.enable_color_detection(is_enabled=False)
+        self.rvr.sensor_control.stop()
+        time.sleep(0.5)
+        self.shell.turn_off_shell()
 
 
-
-
-    def _align(self, color: str) -> None:
+    def _align(self, color: int) -> bool:
         '''Aligns the robot with a ball of the specified color.
 
         This function uses computer vision to detect and align the robot with a ball of the specified color. 
         It sets the color filter on the camera, then continuously adjusts the robot's position based on the 
         ball's position relative to the center of the camera's field of view.'''
 
-        self.vision.camera.set_color_filter(color, precision=15)
+        self.vision.camera.set_color_filter(color, precision=10)
+        first_run = True
         stop = False
         K_p = 0.35
-        K_i = 0.015
+        K_i = 0.01
         robot_proportion_angle_deg = 0
         robot_sum_angle_deg = 0
         pan_offset = 5.0
         while True:
+            self.shell.next_hypnosis_step()
+
             mask = self.vision.camera.get_color_mask()
-            #If there are less than 10 active pixels
-            if np.sum(mask/255) < 10:
+            #If there are less than 20 active pixels
+            if np.sum(mask/255) < 20:
                 time.sleep(0.1)
                 if stop:
-                    return
+                    return False
                 stop = True
                 continue
 
@@ -240,29 +240,51 @@ class Robot():
             #The mask exists and we know we have found an objects (>=10 active pixels in mask)
             #Get center index in (Row,Col) format
             mask_center = np.flip((np.array(mask.shape)-1)/2)
-            avg_point = self.vision.get_avg_mask_point(mask, relative_point=mask_center)
-            #Now update the pan tilt unit according to the output of the control system (avg_point); with reference point at (0,0)
-            self.vision.pan_tilt_unit.update(avg_point)
-            #Now move the robot according to the current angle of the pan unit
-            cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556
-            cur_pan_angle -= pan_offset
+            #avg_point = self.vision.get_avg_mask_point(mask, relative_point=mask_center)
             
+            #Get the largest contour for the mask and find the centroid relative to the center of the mask
+            largest_contour = self.vision.get_largest_contour(mask)
+            largest_contour_bounding_box = self.vision.get_contour_bounding_box(largest_contour)
+            largest_contour_centroid = self.vision.get_contour_bounding_box_centroid(largest_contour_bounding_box)
+            rel_point = self.vision.get_relative_position(largest_contour_centroid, relative_point=mask_center)
+
+            #Now update the pan tilt unit according to the output of the control system (avg_point); with reference point at (0,0)
+            #########self.vision.pan_tilt_unit.update(rel_point)
+            #Now move the robot according to the current angle of the pan unit
+            ##########cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556
+            ##########cur_pan_angle -= pan_offset
+            
+            #TEMP FIX FOR FAULTY PAN-TILT-UNIT
+            cur_pan_angle = -rel_point[0]/(self.vision.camera.width/2)
+            cur_pan_angle *= 80.0 #160deg FOV -> +/- 80 deg
+
             robot_proportion_angle_deg = K_p*cur_pan_angle
             robot_sum_angle_deg += K_i*cur_pan_angle
             
             #compute the turn velocity
             curr_left_velocity = -(robot_proportion_angle_deg+robot_sum_angle_deg)/90.0
             curr_right_velocity = (robot_proportion_angle_deg+robot_sum_angle_deg)/90.0
+            #Ensure that the velocity is never below 0.05 
+            if(curr_left_velocity > 0):
+                curr_left_velocity = max(curr_left_velocity, 0.15)
+                curr_right_velocity = min(curr_right_velocity, -0.15)
+            else:
+                curr_left_velocity = min(curr_left_velocity, -0.15)
+                curr_right_velocity = max(curr_right_velocity, 0.15)
+
+            #slowly move backwards while aligning
+            curr_left_velocity -= 0.05
+            curr_right_velocity -= 0.05
 
             #check if the turn velocity has gotten small enough to stop update loop
-            print(cur_pan_angle, np.abs(curr_left_velocity))
-            if np.abs(cur_pan_angle) < 2.50 and np.abs(curr_left_velocity) < 0.01:
+            print(np.abs(cur_pan_angle), np.abs(curr_left_velocity))
+            if not first_run and np.abs(cur_pan_angle) < 10.0 and np.abs(curr_left_velocity) <= 0.25:
                 self.rvr.drive_tank_si_units(
                     left_velocity = 0,
                     right_velocity = 0
                 )
                 print("STOP!")
-                return
+                return True
 
             #if not, keep updating speed
             else:
@@ -270,6 +292,10 @@ class Robot():
                     left_velocity = curr_left_velocity,
                     right_velocity = curr_right_velocity
                 )
+            
+            #can only reach stopping condition if not on first run
+            first_run = False
+            time.sleep(0.05)
 
     def _stalk(self, color: str) -> float: #float | None:
         '''Attempts to stalk an object of the specified color.
@@ -281,16 +307,20 @@ class Robot():
         object is not found or there is not enough difference in the widths of the object at 
         different positions, it returns None or -1, respectively.'''
 
-        #Look for red object
-        self.vision.camera.set_color_filter(color, precision=15)
+
+        #reset cameras
+        self.vision.pan_tilt_unit.set_servo_angles(0, 0)
+        #Look for object
+        self.vision.camera.set_color_filter(color, precision=10)
         #take 3 pictures and get the average bounding box pixel width of all detected one
         p_width_1 = 0
         img_found = 0
         for i in range(5):
+            self.shell.next_hypnosis_step()
             #get the color mask
             mask = self.vision.camera.get_color_mask()
-            #If there are less than 10 active pixels
-            if np.sum(mask/255) < 10:
+            #If there are less than 20 active pixels
+            if np.sum(mask/255) < 20:
                 #wait and try again
                 time.sleep(0.1)
                 print("Width_1=None")
@@ -301,11 +331,13 @@ class Robot():
             if largest_contour_bounding_box[2] < 5:
                 print("Object too small!")
                 print(f"width = {largest_contour_bounding_box[2]}")
+                time.sleep(0.1)
                 continue
             p_width_1 += largest_contour_bounding_box[2]
             print(f"Width_1={largest_contour_bounding_box[2]}")
             #The mask exists and we know we have found an objects (>=20 active pixels in mask)
             img_found += 1
+
         #get the average width or specify no width for no object being found
         if img_found != 0:
             print(f"total_width_1={p_width_1}")
@@ -314,12 +346,17 @@ class Robot():
             print(f"avg_width_1={p_width_1}")
         else:
             p_width_1 = None
+            return -1
         #move radially inward by m meters
         movement = -0.15 #m
+        self.shell.next_hypnosis_step()
         self.rvr.reset_yaw()
         time.sleep(0.1)
+
+        self.shell.next_hypnosis_step()
         self.rvr.reset_locator_x_and_y()
         time.sleep(0.1)
+
         self.rvr.drive_to_position_si(
             yaw_angle = 0,
             x=0,
@@ -327,15 +364,18 @@ class Robot():
             linear_speed=0.15,
             flags=0 if movement>0 else 1
         )
-        time.sleep(2.5)
+        for i in range(5):
+            self.shell.next_hypnosis_step()
+            time.sleep(0.1)
         #get the average width of 3 pictures for the object at the new position
         p_width_2 = 0
         img_found = 0
         for i in range(5):
+            self.shell.next_hypnosis_step()
             #get the color mask
             mask = self.vision.camera.get_color_mask()
-            #If there are less than 10 active pixels
-            if np.sum(mask/255) < 10:
+            #If there are less than 20 active pixels
+            if np.sum(mask/255) < 20:
                 #wait and try again
                 time.sleep(0.1)
                 print("Width_2=None")
@@ -346,12 +386,15 @@ class Robot():
             if largest_contour_bounding_box[2] < 5:
                 print("Object width too small!")
                 print(f"width = {largest_contour_bounding_box[2]}")
+                time.sleep(0.1)
                 continue
             p_width_2 += largest_contour_bounding_box[2]
             print(f"Width_2={largest_contour_bounding_box[2]}")
             #The mask exists and we know we have found an objects (>=20 active pixels in mask)
             img_found += 1
+
         #get the average width or specify no width for no object being found
+        self.shell.next_hypnosis_step()
         if img_found != 0:
             print(f"total_width_2={p_width_2}")
             p_width_2 /= img_found
@@ -359,13 +402,14 @@ class Robot():
             print(f"avg_width_2={p_width_2}")
         else:
             p_width_2 = None
+            return -1
         #Ensure that the width of the object was found in both cases
         if p_width_1==None or p_width_2==None:
             print(f"Images not found! width1={p_width_1}, width2={p_width_2}")
-            return None
+            return -1
         elif np.abs(p_width_1-p_width_2) < 2:
                 print("WARNING: Not enough difference in images to properly compute depth info")
-                return -1
+                return 0
         #Use the two average widths of the two positions to get an estimation of depth
         obj_depth = self.vision.get_temporal_difference_object_depth(
             p_length1=p_width_1, 
@@ -377,19 +421,52 @@ class Robot():
     
     def _pounce(self, color: str, depth: float) -> float: #float | None:)
         #case after object
-        velocity = 1.15
+        velocity = 0.9
         self.rvr.drive_tank_si_units(
             left_velocity = velocity,
             right_velocity = velocity
         )
-        distance_offset = 0.15 #m
-        time.sleep((depth-distance_offset)/velocity)
+        distance_offset = 0.2 #m
+        if(depth-distance_offset > 0):
+            time.sleep((depth-distance_offset)/velocity)
 
         #transition into move and grab code
-        reward = self._move_and_grab_color(color)
+        reward = self._move_and_grab_color(color, timeout_sec=5)
         return(reward)
 
-    def _test_attack(self, color: str) -> None:
+    def _approach(self, color: int) -> float:
+        self.shell.start_hypnosis()
+
+        is_aligned = self._align(color)
+        #exit is not aligned
+        if(not is_aligned):
+            self.shell.turn_off_shell()
+            print("action aborted")
+            return(0)
+        
+        depth = self._stalk(color)
+        #exit is stalk lost object
+        if(depth < 0):
+            self.shell.turn_off_shell()
+            print("action aborted")
+            return(0)
+        
+        print(f"depth = {depth}")
+
+        #open up the claw
+        self.claw.set_percent_open(100)
+        time.sleep(0.1)
+        
+        self.shell.turn_off_shell()
+
+        #now pounce and try to grab object
+        reward = self._pounce(color, depth)
+
+        #return the reward
+        print(f"reward = {reward}")
+        return(reward)
+
+    def _test_attack(self, color: int) -> None:
         '''Tests the robot's attack mechanism against an object of the specified color.
 
         This function aligns the robot with the object of the specified color using the 
@@ -405,28 +482,22 @@ class Robot():
         if depth == None:
             print("FAIL!")
             return
-        self.claw.set_percent_open(90)
+        self.claw.set_percent_open(100)
         time.sleep(0.1)
         reward = self._pounce(color, depth)
         print(f"Reward = {reward}")
 
-    def _approach(self, color: str) -> float:
-        self._align(color)
-        depth = self._stalk(color)
-        print(f"depth = {depth}")
-        if depth == None:
-            return None
-        self.claw.set_percent_open(90)
-        time.sleep(0.1)
-        reward = self._pounce(color, depth)
-        return(reward)
-
-    def _get_blanching_probability(self, area):
+    def _get_blanching_probability(self, area_proportion):
+        #error check
+        if(area_proportion <= 0):
+            return(0.0)
+        #otherwise, compute proportion
         return(
-            1 / (1 + -0.05*(np.exp(area-150)))
+            #equation based on softmax with a logarithmic x-axis modified s.t. p(5) = 0.5
+            np.exp(-3.4657/(100.0*area_proportion))
         )
 
-    def _perform_action(self, action: str, color: str) -> float:
+    def _perform_action(self, action: str, color: int) -> float:
         '''Performs the specified action.
 
         This function performs the specified action based on the provided action type. 
@@ -438,68 +509,82 @@ class Robot():
 
         if action == 'APPROACH':
             reward = self._approach(color)
-            self.claw.release_object()
-            self.rvr.drive_tank_si_units(
-                left_velocity = -0.1,
-                right_velocity = -0.1
-            )
-            time.sleep(1.5)
-            self.rvr.drive_tank_si_units(
-                left_velocity = 0,
-                right_velocity = 0
-            )
+            
+            self.claw.set_percent_open(100)
+
+            if(reward < 0):
+                #blanch and then camo
+                self._run_blanch()
+                self._run_camo()
+            else:
+                self.rvr.drive_tank_si_units(
+                    left_velocity = -0.1,
+                    right_velocity = -0.1
+                )
+                time.sleep(1)
+                self.rvr.drive_tank_si_units(
+                    left_velocity = 0,
+                    right_velocity = 0
+                )
+                self.rvr.drive_control.reset_heading()
+                time.sleep(0.5)
+                self.rvr.drive_control.turn_left_degrees(
+                    heading=0,  # Valid heading values are 0-359
+                    amount=180
+                )
+                time.sleep(0.5)
         #run away
         elif action == 'RUN':
             #get the current view of the robot
             image = self.vision.camera.get_image()
             bounding_box = self.vision.get_bounding_box_for_color_in_image(image, color)
-            bb_width = bounding_box[2]
-            p_blanching = self._get_blanching_probability(bb_width)
+            bb_area = bounding_box[2]*bounding_box[3]
+            image_area = self.vision.camera.height*self.vision.camera.width
+            bb_area_proportion = bb_area/image_area
+            p_blanching = self._get_blanching_probability(bb_area_proportion)
+            #test to see if the cuttlebot will blanch
             if(random.random() < p_blanching):
                 #blanch and then camo
                 self._run_blanch()
                 self._run_camo()
+            #case for only camouflage
             else:
-                #only camo
                 self._run_camo()
-            time.sleep(1)
+            time.sleep(0.5)
             reward = 0
         #return to center and reset camera
-        self.vision.pan_tilt_unit.set_servo_angles(0, 0)
+        ###self.vision.pan_tilt_unit.set_servo_angles(0, 0)
         return reward
 
     #see color and perform action
     def forage(self):
-        #initiallize a color dictionary: assign a string to a hue value
-        color_dict = {
-            "RED" : 0,
-            "YELLOW" : 30,
-            #"GREEN" : 80,
-            #"BLUE": 120,
-        }
         #loop forever and keep updating values
         #self._explore() # Rotate to a random direction
         counter = 1
         while(1):
             #Get list of colors in view of the camera
-            colors_in_view = self.vision.get_colors_in_view(color_dict)
+            colors_in_view = self.vision.get_colors_in_view(self.color_dict)
+            print(f"colors in view = {colors_in_view}")
             #Check if any colors were found
             if(len(colors_in_view) == 0):
                 #explore: rotate to a random direction and see if any pictures were found again
                 self._explore_turn()
+                time.sleep(1)
             #Check for colors after turning the robot
-            colors_in_view = self.vision.get_colors_in_view(color_dict)
+            colors_in_view = self.vision.get_colors_in_view(self.color_dict)
             #Check if any colors were found
             if(len(colors_in_view) == 0):
                 #explore: rotate to a random direction and see if any pictures were found again
                 self._explore_move()
+                time.sleep(0.5)
+                #if there were still not object in view, then restart the loop
                 continue
 
             # Define the state of the robot: prioritize state with the most negative possible outcome (i.e. if the robot sees a prey and predator at the same time, it will prioritize to run away from the predator. But if the robot only sees one color in its view, it will always return that color as the state)
             #state = self.cognition.get_state_with_largest_view(colors_in_view)
             state = self.cognition.get_state_with_largest_punishment(colors_in_view)
             action = self.cognition.get_action(state)
-            reward = self._perform_action(action, color=color_dict[state])
+            reward = self._perform_action(action, color=self.color_dict[state])
             new_state = self.cognition.get_new_state(state, action)
             self.cognition.update_q_table(state, action, reward, new_state)
             #save the current Q-table
@@ -508,8 +593,9 @@ class Robot():
             #     self.cognition.print_q_table()
             #update the counter
             counter += 1
+            time.sleep(0.5)
 
-    def _move_and_grab_color(self, color: str) -> int:
+    def _move_and_grab_color(self, color: int, timeout_sec: float=5) -> int:
         '''Moves the robot towards an object of the specified color and attempts to grab it.
 
         This function adjusts the robot's position based on the detected object's position and 
@@ -520,21 +606,21 @@ class Robot():
         #open the claw
         self.claw.set_percent_open(100)
         #Look for red object
-        self.vision.camera.set_color_filter(color, precision=15)
-        if  color == 0:
-            optimal_object_width = 190
-        else:
-            optimal_object_width = 225
+        self.vision.camera.set_color_filter(color, precision=10)
+        #if  color == 0:
+        #    optimal_object_width = 100
+        #else:
+        #    optimal_object_width = 225
         #initiallize tank drive speed variabels
         driving_left_velocity = 0
         driving_right_velocity = 0
 
-        is_claw_closed = False # Initialize the claw status
         #control loop
-        while True:
+        current_time = time.time()
+        while(time.time()-current_time < timeout_sec):
             # Get the color mask
             mask = self.vision.camera.get_color_mask()
-            # If there are less than 20 active pixels
+            # If there are less than 10 active pixels
             if np.sum(mask/255) < 20:
                 #stop the robot
                 driving_left_velocity *= 0.75
@@ -545,7 +631,7 @@ class Robot():
                 )
                 time.sleep(0.1)
                 continue
-            #The mask exists and we know we have found an objects (>=20 active pixels in mask)
+            #The mask exists and we know we have found an objects (>=100 active pixels in mask)
             #Get center index in (Row,Col) format
             mask_center = np.flip((np.array(mask.shape)-1)/2)
             #avg_point = self.vision.get_avg_mask_point(mask, relative_point=mask_center)
@@ -554,11 +640,17 @@ class Robot():
             largest_contour_bounding_box = self.vision.get_contour_bounding_box(largest_contour)
             largest_contour_centroid = self.vision.get_contour_bounding_box_centroid(largest_contour_bounding_box)
             rel_point = self.vision.get_relative_position(largest_contour_centroid, relative_point=mask_center)
+            
             #Now update the pan tilt unit according to the output of the control system (avg_point); with reference point at (0,0)
-            self.vision.pan_tilt_unit.update(rel_point)
+            ###########self.vision.pan_tilt_unit.update(np.array([rel_point[0], 0]))
             #Now move the robot according to the current angle of the pan unit
-            cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556 #!!!need to add servo class to PTU so we can get the servo angle
-            proportion = 0.3
+            ###########cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556 #!!!need to add servo class to PTU so we can get the servo angle
+
+            #TEMP FIX FOR FAULTY PAN-TILT-UNIT
+            cur_pan_angle = -rel_point[0]/(self.vision.camera.width/2)
+            cur_pan_angle *= 80.0 #160deg FOV -> +/- 80 deg
+
+            proportion = 0.25
             robot_proportion_angle_deg = proportion*cur_pan_angle
             #Filter out small robot movements
             if np.abs(robot_proportion_angle_deg) < 0.5:
@@ -569,11 +661,20 @@ class Robot():
                 driving_left_velocity = -robot_proportion_angle_deg/90.0
                 driving_right_velocity = robot_proportion_angle_deg/90.0
             #in addition to turning the robot, add an offset to move it forward toward the object of intetest
-            velocity_limit = 0.30 #m/s
-            driving_left_velocity += velocity_limit*(1.0 - largest_contour_bounding_box[2]/optimal_object_width)
-            driving_right_velocity += velocity_limit*(1.0 - largest_contour_bounding_box[2]/optimal_object_width)
+            velocity_upper_limit = 0.3 #m/s
+            velocity_lower_limit = 0.1 #m/s
+            percentage_multiplier = 2.0
+            bb_percent_to_bottom = largest_contour_bounding_box[1]/self.vision.camera.height
+            driving_left_velocity += min(
+                velocity_upper_limit,
+                max(velocity_lower_limit, percentage_multiplier*bb_percent_to_bottom)
+            )
+            driving_right_velocity += min(
+                velocity_upper_limit,
+                max(velocity_lower_limit, percentage_multiplier*bb_percent_to_bottom)
+            )
             #Offset to account for offcentering
-            driving_left_velocity += 0.075
+            driving_left_velocity += 0.025
             #after computing the new velocity of the wheels, set the values to the rvr
             self.rvr.drive_tank_si_units(
                     left_velocity = driving_left_velocity,
@@ -583,12 +684,20 @@ class Robot():
             #print("driving left velocity:", driving_left_velocity)
             #print("driving_right_velocity:", driving_right_velocity)
             #if( largest_contour_bounding_box[2] > optimal_object_width):
-            if abs(driving_left_velocity) <= 0.1 and abs(driving_right_velocity) <= 0.1 and not is_claw_closed:
+            if largest_contour_bounding_box[1]/self.vision.camera.height <= 0.01:
                 # When the object is close enough, close the claw and stop the robot
-                self.claw.capture_object()
-                if (not self.claw.is_object_captured()) or (self.claw.is_object_captured() and self.claw.get_percent_open() < 10):
+                #self.claw.capture_object()
+                if(self.claw.get_percent_open() >= 10 and not self.claw.is_object_captured()):
+                    claw_open_percentage = self.claw.get_percent_open()
+                    self.claw.set_percent_open(claw_open_percentage-10)
+                    time.sleep(0.1)
+                #claw is either closed all the way or has captured an object
+                elif(self.claw.get_percent_open() < 10):
                     reward = -10
-                else:
+                    return reward
+
+                elif(self.claw.is_object_captured()):
+                    #an object has been captured; shake and check if it is still active
                     self._shake()
                     #1 second time delay
                     time.sleep(1)
@@ -596,11 +705,20 @@ class Robot():
                         reward = 5
                     else:
                         reward = -10
-
-                return reward
+                    return reward
+                
+                #error case, do not expect to run
+                else:
+                    reward = -10
+                    return reward
+                 
             # Show the camera view and the masked image
             #cv2.imshow("frame", self.vision.camera.get_image())
             #cv2.imshow("mask", mask)
+        
+        #return no reward if cannot get to object in given time
+        reward = 0
+        return reward
 
 
 
@@ -781,6 +899,28 @@ class Robot():
             print("BAD! D:")
 
 
+    def camera_color_mask_view(self, color: int) -> None:
+        print("Entering camera mode. Press ESC to quit")
+        current_time = time.time()
+        try:
+            while(cv2.waitKey(100) != 27 and time.time()-current_time < 10):
+                image = self.vision.camera.get_image()
+                bounding_box = self.vision.get_bounding_box_for_color_in_image(image, color)
+                if(bounding_box != None):
+                    image = cv2.rectangle(image, (bounding_box[0], bounding_box[1]), (bounding_box[0]+bounding_box[2], bounding_box[1]+bounding_box[3]), (0, 255, 0), 2)
+                    bb_area = bounding_box[2]*bounding_box[3]
+                    print(f"bb_area = {bb_area}")
+                    print(f"bb_width = {bounding_box[2]}")
+                    print(f"bb_y = {bounding_box[1]}")
+                    print(f"bb_area_proportion = {bb_area/(self.vision.camera.height*self.vision.camera.width)}")
+                scaled_down_image = cv2.resize(image, (640, 480))
+                cv2.imshow(f"Camera Image", scaled_down_image)
+        except Exception as e:
+            print(e)
+            print("Stopping program")
+        finally:
+            #destroys all the windows we created before exiting the program
+            cv2.destroyAllWindows()
 
 
     def camera_mode(self) -> None:
@@ -946,7 +1086,7 @@ class Robot():
         to approach the object at a target distance.'''
 
         #Look for red object
-        self.vision.camera.set_color_filter(0, precision=15)
+        self.vision.camera.set_color_filter(0, precision=10)
         #initiallize tank drive speed variabels
         driving_left_velocity = 0
         driving_right_velocity = 0
@@ -1023,7 +1163,7 @@ class Robot():
         object based on the change in width and movement distance.'''
 
         #Look for red object
-        self.vision.camera.set_color_filter(0, precision=15)
+        self.vision.camera.set_color_filter(0, precision=10)
         #face the object
         self.__align_via_body_movement()
         #take 3 pictures and get the average bounding box pixel width of all detected one
@@ -1127,7 +1267,7 @@ class Robot():
 
         #####Can also perform this task below for each contour in the image#####
         #Look for red object
-        self.vision.camera.set_color_filter(0, precision=15)
+        self.vision.camera.set_color_filter(0, precision=10)
         #set cameras to 0, 0 angle
         self.vision.pan_tilt_unit.set_servo_angles(0, 0)
         #face largest object with color of interest
@@ -1218,7 +1358,7 @@ class Robot():
         moves towards it, and grabs it with the claw. It stops the robot and opens the claw once the object is grabbed.'''
 
         #Look for red object
-        self.vision.camera.set_color_filter(0, precision=15)
+        self.vision.camera.set_color_filter(0, precision=10)
         #initiallize tank drive speed variabels
         driving_left_velocity = 0
         driving_right_velocity = 0
@@ -1228,7 +1368,7 @@ class Robot():
         while True:
             # Get the color mask
             mask = self.vision.camera.get_color_mask()
-            # If there are less than 20 active pixels
+            # If there are less than 10 active pixels
             if np.sum(mask/255) < 20:
                 #stop the robot
                 driving_left_velocity *= 0.75
@@ -1248,10 +1388,16 @@ class Robot():
             largest_contour_bounding_box = self.vision.get_contour_bounding_box(largest_contour)
             largest_contour_centroid = self.vision.get_contour_bounding_box_centroid(largest_contour_bounding_box)
             rel_point = self.vision.get_relative_position(largest_contour_centroid, relative_point=mask_center)
+            
             #Now update the pan tilt unit according to the output of the control system (avg_point); with reference point at (0,0)
-            self.vision.pan_tilt_unit.update(rel_point)
+            #########self.vision.pan_tilt_unit.update(rel_point)
             #Now move the robot according to the current angle of the pan unit
-            cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556 #!!!need to add servo class to PTU so we can get the servo angle
+            #########cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556 #!!!need to add servo class to PTU so we can get the servo angle
+
+            #TEMP FIX FOR FAULTY PAN-TILT-UNIT
+            cur_pan_angle = -rel_point[0]/(self.vision.camera.width/2)
+            cur_pan_angle *= 80.0 #160deg FOV -> +/- 80 deg
+
             proportion = 0.3
             robot_proportion_angle_deg = proportion*cur_pan_angle
             #Filter out small robot movements
@@ -1304,7 +1450,7 @@ class Robot():
         detected color.'''
 
         #Look for red object
-        self.vision.camera.set_color_filter(0, precision=15)
+        self.vision.camera.set_color_filter(0, precision=10)
         #initiallize tank drive speed variabels
         driving_left_velocity = 0
         driving_right_velocity = 0
@@ -1332,10 +1478,16 @@ class Robot():
             largest_contour_bounding_box = self.vision.get_contour_bounding_box(largest_contour)
             largest_contour_centroid = self.vision.get_contour_bounding_box_centroid(largest_contour_bounding_box)
             rel_point = self.vision.get_relative_position(largest_contour_centroid, relative_point=mask_center)
+            
             #Now update the pan tilt unit according to the output of the control system (avg_point); with reference point at (0,0)
-            self.vision.pan_tilt_unit.update(rel_point)
+            ########self.vision.pan_tilt_unit.update(rel_point)
             #Now move the robot according to the current angle of the pan unit
-            cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556 #!!!need to add servo class to PTU so we can get the servo angle
+            ########cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556 #!!!need to add servo class to PTU so we can get the servo angle
+
+            #TEMP FIX FOR FAULTY PAN-TILT-UNIT
+            cur_pan_angle = -rel_point[0]/(self.vision.camera.width/2)
+            cur_pan_angle *= 80.0 #160deg FOV -> +/- 80 deg
+
             proportion = 0.3
             robot_proportion_angle_deg = proportion*cur_pan_angle
             #Filter out small robot movements
@@ -1366,21 +1518,32 @@ class Robot():
         This method continuously searches for the specified color using the vision system and aligns the robot's orientation
         with the detected color. It adjusts both the direction and speed of the robot to ensure it faces the color accurately.'''
 
-        self.vision.camera.set_color_filter(color, precision=15)
+        self.vision.camera.set_color_filter(color, precision=10)
         while True:
             mask = self.vision.camera.get_color_mask()
-            #If there are less than 10 active pixels
-            if np.sum(mask/255) < 10:
+            #If there are less than 20 active pixels
+            if np.sum(mask/255) < 20:
                 time.sleep(0.1)
                 continue
             #The mask exists and we know we have found an objects (>=10 active pixels in mask)
             #Get center index in (Row,Col) format
             mask_center = np.flip((np.array(mask.shape)-1)/2)
-            avg_point = self.vision.get_avg_mask_point(mask, relative_point=mask_center)
+            #avg_point = self.vision.get_avg_mask_point(mask, relative_point=mask_center)
+            #Get the largest contour for the mask and find the centroid relative to the center of the mask
+            largest_contour = self.vision.get_largest_contour(mask)
+            largest_contour_bounding_box = self.vision.get_contour_bounding_box(largest_contour)
+            largest_contour_centroid = self.vision.get_contour_bounding_box_centroid(largest_contour_bounding_box)
+            rel_point = self.vision.get_relative_position(largest_contour_centroid, relative_point=mask_center)
+            
             #Now update the pan tilt unit according to the output of the control system (avg_point); with reference point at (0,0)
-            self.vision.pan_tilt_unit.update(avg_point)
+            ###############self.vision.pan_tilt_unit.update(rel_point)
             #Now move the robot according to the current angle of the pan unit
-            cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556
+            ###############cur_pan_angle = (self.vision.pan_tilt_unit.controller.PWM_duty_cycles[0]-7.5)/0.055556
+
+            #TEMP FIX FOR FAULTY PAN-TILT-UNIT
+            cur_pan_angle = -rel_point[0]/(self.vision.camera.width/2)
+            cur_pan_angle *= 80.0 #160deg FOV -> +/- 80 deg
+
             proportion = 0.4
             robot_proportion_angle_deg = proportion*cur_pan_angle
             #pan_compensation_PWM = 7.5 + 0.055556*(-robot_proportion_angle_deg)

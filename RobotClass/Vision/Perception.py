@@ -16,7 +16,7 @@ class Perception():
 
 
 
-    def get_bounding_box_for_color_in_image(self, image, color, precision=15):
+    def get_bounding_box_for_color_in_image(self, image, color, precision=10):
         #set the color filter and get the mask in the picture
         self.camera.set_color_filter(color, precision)
         color_mask = self.camera.color_filter.get_color_filter_mask(image)
@@ -31,7 +31,7 @@ class Perception():
 
 
 
-    def get_colors_in_view(self, color_dict: dict[str, int], precision: int=15) -> list[str]:
+    def get_colors_in_view(self, color_dict: dict[str, int], precision: int=10) -> list[str]:
         '''Determine if the defined colors passed to the function are in view of the camera.
 
         This method takes a dictionary of colors and their corresponding RGB values, along with an optional precision
@@ -57,9 +57,10 @@ class Perception():
             #get the width of the bounding box of the largest countour
             largest_contour = self.get_largest_contour(color_mask)
             largest_contour_bounding_box = self.get_contour_bounding_box(largest_contour)
-            pixel_width = largest_contour_bounding_box[2]
-            #condition 2: the object with have a width no less than 10 pixels (reduces chance of contour being random noise)
-            if(pixel_width >= 10):
+            bb_area = largest_contour_bounding_box[2]*largest_contour_bounding_box[3]
+            bb_y = largest_contour_bounding_box[1]
+            #condition 2 & 3: the object bounding box must have an area no less than 150 pixels^2 (reduces chance of contour being random noise) and the y position of the bounding box starting point must less than or equal to 90 (prevnts seeing far away objects/noise)
+            if(bb_area > 150 and bb_y <= 65):
                 colors_in_view.append(color)
         #return the list of colors in view
         return colors_in_view
@@ -68,7 +69,7 @@ class Perception():
 
 
     #Method to track a certain color in the camera's view
-    def track_color(self, hue: int, precision: int=15) -> None:
+    def track_color(self, hue: int, precision: int=10) -> None:
         '''Method to track a certain color in the camera's view.
 
         This method tracks a specified color within the camera's view. It sets a color filter based on the hue value
@@ -88,9 +89,16 @@ class Perception():
                 continue
             #Get the average point of the mask (relative to the center of the camera)
             mask_center = np.flip((np.array(mask.shape)-1)/2)
-            avg_point = self.get_avg_mask_point(mask, relative_point=mask_center)
+            #avg_point = self.get_avg_mask_point(mask, relative_point=mask_center)
+            
+            #Get the largest contour for the mask and find the centroid relative to the center of the mask
+            largest_contour = self.get_largest_contour(mask)
+            largest_contour_bounding_box = self.get_contour_bounding_box(largest_contour)
+            largest_contour_centroid = self.get_contour_bounding_box_centroid(largest_contour_bounding_box)
+            rel_point = self.get_relative_position(largest_contour_centroid, relative_point=mask_center)
+
             #Now update the pan tilt unit according to the output of the control system (avg_point); with reference point at (0,0)
-            self.pan_tilt_unit.update(avg_point)
+            self.pan_tilt_unit.update(rel_point)
             #Option to present the image of the camera
             image = cv2.circle(self.camera.get_image(), tuple([int(i) for i in avg_point+mask_center]), radius=5, color=(0,0,255), thickness=3)
             cv2.imshow("Camera Image", image)
