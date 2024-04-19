@@ -1,9 +1,13 @@
 from Robot import Robot
 import time
 
-robot = Robot()
+robot = Robot(learning_rate=0.2, softmax_beta=1.0, discount_factor=0.9)
 
 robot.forage()
+
+
+#robot._test_shell()
+#robot._run_blanch()
 
 
 #print(robot.claw.get_percent_open())
@@ -14,7 +18,22 @@ robot.forage()
 #    time.sleep(0.5)
 
 
-#robot.bumper.move_with_check(left_velocity=-.3, right_velocity=-0.3, distance_m=0.3)
+#robot.bumper.move_with_check(left_velocity=.3, right_velocity=0.3, distance_m=0.75)
+#robot.bumper.move_with_check(left_velocity=.3, right_velocity=0.3, distance_m=-0.4)
+#robot.rvr.drive_control.reset_heading()
+#time.sleep(1)
+#robot.rvr.drive_control.turn_left_degrees(
+#            heading=0,  # Valid heading values are 0-359
+#            amount=180
+#        )
+#time.sleep(1)
+#robot.rvr.drive_control.reset_heading()
+#time.sleep(1)
+#robot.rvr.drive_control.turn_left_degrees(
+#            heading=0,  # Valid heading values are 0-359
+#            amount=180
+#        )
+#time.sleep(1)
 
 #robot._align(110)
 

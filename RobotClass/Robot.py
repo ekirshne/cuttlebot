@@ -13,18 +13,39 @@ from Bumper import Bumper
 from Shell.Shell import Shell
 import board
 
-camouflage_color = (0, 0, 0)
+import colorsys
+
+camouflage_color = np.array([0, 0, 0])
+proportion_change = 0.15
 
 def color_detected_handler(color_detected_data):
     global camouflage_color
+    global proportion_change
+    
+    new_camouflage_color = (color_detected_data['ColorDetection']['R']/255.0, color_detected_data['ColorDetection']['G']/255.0, color_detected_data['ColorDetection']['B']/255.0)
+    hsv = colorsys.rgb_to_hsv(*new_camouflage_color)
+    
+    print(hsv)
 
-    #print('Color detection data response: ', color_detected_data)
-    camouflage_color = (color_detected_data['ColorDetection']['R'], color_detected_data['ColorDetection']['G'], color_detected_data['ColorDetection']['B'])
+    modified_hsv = [
+       hsv[0],
+       1.0,
+       hsv[2]
+    ]
+    modified_rgb = np.array(colorsys.hsv_to_rgb(*modified_hsv))
+    
+    read_camouflage_color = (255.0*modified_rgb).astype('i')
+
+    camouflage_color = (1-proportion_change)*camouflage_color + proportion_change*read_camouflage_color
+    camouflage_color = camouflage_color.astype('i')
+
+    print(camouflage_color)
+    
 
 class Robot():
 
     #class constructor
-    def __init__(self):
+    def __init__(self, learning_rate, softmax_beta, discount_factor):
         #Instantiate the modules on the robot alongside the robot itself
         #First the rvr
         self.rvr = SpheroRvrObserver()
@@ -52,7 +73,12 @@ class Robot():
             "GREEN" : 40, # intended Predator
             "BLUE": 110 # intended Prey
         }
-        self.cognition = Cognition(self.color_dict)
+        #save the parameters of the robot
+        self.learning_rate = learning_rate
+        self.softmax_beta = softmax_beta
+        self.discount_factor = discount_factor
+        #Define the cognition module
+        self.cognition = Cognition(self.color_dict, self.learning_rate, self.softmax_beta, self.discount_factor)
         #The Bumper
         self.bumper = Bumper(self.rvr, self.claw, left_side_pin=board.D24, right_side_pin=board.D16, left_back_pin=board.D25, right_back_pin=board.D20)
         #The Shell
@@ -65,7 +91,12 @@ class Robot():
         self.claw.set_percent_open(0)
 
     def _test_shell(self):
-        self.vision.camera.set_color_filter(0, precision=10)
+        self.rvr.enable_color_detection(is_enabled=True)
+        self.rvr.sensor_control.add_sensor_data_handler(
+            service=RvrStreamingServices.color_detection,
+            handler=color_detected_handler
+        )
+        self.rvr.sensor_control.start(interval=250)
         while(1):
             #self.shell.hypnotize()
             #time.sleep(5)
@@ -75,12 +106,6 @@ class Robot():
 
             # camouflage 
             # How to work with RVR's color detection: https://sdk.sphero.com/raspberry-pi-setup/how-to-use-raspberry-pi-sdk#h.vkbuw821vfgr
-            self.rvr.enable_color_detection(is_enabled=True)
-            self.rvr.sensor_control.add_sensor_data_handler(
-                service=RvrStreamingServices.color_detection,
-                handler=color_detected_handler
-            )
-            self.rvr.sensor_control.start(interval=250)
             self.shell.camouflage(color = camouflage_color, mode=1)
             #time.sleep(3)
             #self.rvr.enable_color_detection(is_enabled=False)
@@ -137,6 +162,17 @@ class Robot():
         )
         
     def _run_blanch(self) -> None:
+        global proportion_change
+        prev_proportion_change = proportion_change
+        proportion_change = 0.5
+
+        self.rvr.enable_color_detection(is_enabled=True)
+        self.rvr.sensor_control.add_sensor_data_handler(
+            service=RvrStreamingServices.color_detection,
+            handler=color_detected_handler
+        )
+        self.rvr.sensor_control.start(interval=250)
+
         self.rvr.drive_tank_si_units(
             left_velocity = -0.5,
             right_velocity = -0.5
@@ -150,12 +186,18 @@ class Robot():
             if(self.bumper.check_limit_pressed()):
                 break
 
-        #Stop and then turn around
+        #Stop and then camouflage
         self.rvr.drive_tank_si_units(
             left_velocity = 0,
             right_velocity = 0
         )
-        time.sleep(0.1)
+        current_time = time.time()
+        wait_time = 1 #s
+        while(time.time()-current_time < wait_time):
+            self.shell.camouflage(color = camouflage_color, mode=1)
+            time.sleep(0.05)
+        
+        proportion_change = prev_proportion_change
         
 
     def _run_camo(self) -> None:
@@ -172,7 +214,7 @@ class Robot():
             service=RvrStreamingServices.color_detection,
             handler=color_detected_handler
         )
-        self.rvr.sensor_control.start(interval=500)
+        self.rvr.sensor_control.start(interval=250)
         
         self.rvr.drive_tank_si_units(
             left_velocity = -0.15,
@@ -202,13 +244,24 @@ class Robot():
             amount=180
         )
 
+        time.sleep(0.5)
+        self.rvr.drive_tank_si_units(
+            left_velocity = 0.15,
+            right_velocity = 0.15
+        )
+        time.sleep(1)
+        self.rvr.drive_tank_si_units(
+            left_velocity = 0,
+            right_velocity = 0
+        )
+
         self.rvr.enable_color_detection(is_enabled=False)
         self.rvr.sensor_control.stop()
         time.sleep(0.5)
         self.shell.turn_off_shell()
 
 
-    def _align(self, color: int) -> bool:
+    def _align(self, color: int, timout: float = 7.0) -> bool:
         '''Aligns the robot with a ball of the specified color.
 
         This function uses computer vision to detect and align the robot with a ball of the specified color. 
@@ -218,8 +271,8 @@ class Robot():
         self.vision.camera.set_color_filter(color, precision=10)
         first_run = True
         stop = False
-        K_p = 0.35
-        K_i = 0.01
+        K_p = 0.3
+        K_i = 0.05
         robot_proportion_angle_deg = 0
         robot_sum_angle_deg = 0
         pan_offset = 5.0
@@ -533,6 +586,15 @@ class Robot():
                     amount=180
                 )
                 time.sleep(0.5)
+                self.rvr.drive_tank_si_units(
+                    left_velocity = 0.15,
+                    right_velocity = 0.15
+                )
+                time.sleep(1)
+                self.rvr.drive_tank_si_units(
+                    left_velocity = 0,
+                    right_velocity = 0
+                )
         #run away
         elif action == 'RUN':
             #get the current view of the robot

@@ -7,7 +7,12 @@ import datetime
 #Cognition class for defining cognitive abilities
 class Cognition():
     #Cognition class constructor
-    def __init__(self, color_dict):
+    def __init__(self, color_dict, learning_rate, softmax_beta, discount_factor):
+        #save the robot cognition parameters
+        self.learning_rate = learning_rate #0.2
+        self.softmax = softmax_beta #
+        self.discount_factor = discount_factor #0.9
+
         # Initialize the Q_table
         self.q_table = dict()
         for color in color_dict:
@@ -19,11 +24,6 @@ class Cognition():
             'FORWARD' : 0,
             'BACK' : 0
         }
-
-        #define a learning rate
-        self.learning_rate = 0.2
-        #define a discount factor
-        self.discount_factor = 0.9
 
         # Create the CSV file and record learning rate and the discount factor info
         self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.datetime.now())
