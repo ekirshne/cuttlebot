@@ -1,4 +1,0 @@
-Folder,Timestamp,Num_Lives,Learning_Rate,Beta_Softmax,Gamma_Discount_Factor,Reward_Predator,Reward_Prey,Environment_Type,Num_Predators,Num_Prey,Runtime_Minutes
-/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H1_M9_S16,2024-04-20 01:09:16,3,0.2,1.0,0.9,-10,5,HOMOGENEOUS,3,3,5
-/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H1_M16_S50,2024-04-20 01:16:50,3,0.2,1.0,0.9,-10,5,HOMOGENEOUS,3,3,5
-/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H1_M23_S2,2024-04-20 01:23:02,3,0.2,1.0,0.9,-10,5,HOMOGENEOUS,3,3,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H1_M40_S59,2024-04-20 01:40:59,3,0.2,1.0,0.9,-10,5,HOMOGENEOUS,3,3,5
