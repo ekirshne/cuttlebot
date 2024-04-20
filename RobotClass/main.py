@@ -17,7 +17,7 @@ robot = Robot(
     
     #Define the number of predators and prey
     environment_type="HOMOGENEOUS", #{HOMOGENEOUS (Mixed), HETEROGENEOUS (Split), and PAIRED (Preditors & Prey close to eachother)} Change the Environment Type if you are changing the layout of the predators and prey
-    num_predators=3,
+    num_predators=1,
     num_prey=3,
 
     #define the amount of time (in minutes to run the robot)
