@@ -7,11 +7,12 @@ import datetime
 #Cognition class for defining cognitive abilities
 class Cognition():
     #Cognition class constructor
-    def __init__(self, color_dict, learning_rate, softmax_beta, discount_factor):
+    def __init__(self, color_dict, learning_rate, softmax_beta, discount_factor, data_path):
         #save the robot cognition parameters
         self.learning_rate = learning_rate #0.2
-        self.softmax = softmax_beta #
+        self.softmax_beta = softmax_beta #1.0
         self.discount_factor = discount_factor #0.9
+        self.data_path = data_path.joinpath("Q_Tables.csv")
 
         # Initialize the Q_table
         self.q_table = dict()
@@ -26,15 +27,21 @@ class Cognition():
         }
 
         # Create the CSV file and record learning rate and the discount factor info
-        self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.datetime.now())
-        initial_data = [
-            ['Learning Rate', self.learning_rate],
-            ['Discount Factor', self.discount_factor],
-            []
-        ]
-        with open(f'/home/cuttlebot/cuttlebot/experiment_results/q_values_{self.timestamp}.csv', 'w', newline='') as file:
+        #self.timestamp = '{:%Y_%m_%d_%H_%M_%S}'.format(datetime.datetime.now())
+        self.write_data_to_csv()
+
+
+    def write_data_to_csv(self):
+        timestamp_string = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        with open(self.data_path, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerows(initial_data)
+            data = [
+                [timestamp_string, 'APPROACH', 'RUN'],
+                ['BLUE', self.q_table['BLUE']['APPROACH'], self.q_table['BLUE']['RUN']],
+                ['GREEN', self.q_table['GREEN']['APPROACH'], self.q_table['GREEN']['RUN']],
+                [] # Add an empty line in the CSV file between each Q table update
+            ]
+            writer.writerows(data)
 
 
     def print_q_table(self) -> None:
@@ -61,8 +68,9 @@ class Cognition():
 
         #referencing alvas & Trevor Merrifield on stack overflow: https://stackoverflow.com/questions/34968722/how-to-implement-the-softmax-function-in-python
         #solution used for numerical stability: e^x / sum(e^x) = e^(x-x_max) / sum(e^(x-x_max))
-        exponential_vector = np.exp(np_value_list - np.max(np_value_list))
-        return exponential_vector/exponential_vector.sum()
+        adjusted_values = self.softmax_beta*np_value_list
+        exponential_vector = np.exp(adjusted_values - np.max(adjusted_values))
+        return exponential_vector/(exponential_vector.sum())
 
 
 
@@ -189,12 +197,4 @@ class Cognition():
         print(f"\tChanged to {self.q_table[state][action]}")
 
         # Record the Q values into the CSV file 
-        data = [
-            ['', 'APPROACH', 'RUN'],
-            ['BLUE', self.q_table['BLUE']['APPROACH'], self.q_table['BLUE']['RUN']],
-            ['GREEN', self.q_table['GREEN']['APPROACH'], self.q_table['GREEN']['RUN']],
-            [] # Add an empty line in the CSV file between each Q table update
-        ]
-        with open(f'/home/cuttlebot/cuttlebot/experiment_results/q_values_{self.timestamp}.csv', 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerows(data)
+        self.write_data_to_csv()

@@ -16,7 +16,7 @@ class Claw():
         self.right_limit_switch = LimitSwitch(pin=right_limit_switch_pin, use_pullup_config=True)
         self.left_limit_switch = LimitSwitch(pin=left_limit_switch_pin, use_pullup_config=True)
         self.servo = Servo(pin=servo_pin, reset_servo_position=False)
-        self.set_percent_open(50)
+        self.set_percent_open(100)
 
 
 

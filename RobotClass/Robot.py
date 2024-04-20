@@ -14,6 +14,9 @@ from Shell.Shell import Shell
 import board
 
 import colorsys
+import datetime
+from pathlib import Path
+import csv
 
 camouflage_color = np.array([0, 0, 0])
 proportion_change = 0.15
@@ -29,7 +32,7 @@ def color_detected_handler(color_detected_data):
 
     modified_hsv = [
        hsv[0],
-       1.0,
+       0.25*hsv[0] + 0.75,
        hsv[2]
     ]
     modified_rgb = np.array(colorsys.hsv_to_rgb(*modified_hsv))
@@ -45,7 +48,51 @@ def color_detected_handler(color_detected_data):
 class Robot():
 
     #class constructor
-    def __init__(self, learning_rate, softmax_beta, discount_factor):
+    def __init__(self, num_lives, learning_rate, softmax_beta, discount_factor, reward_predator, reward_prey, environment_type, num_predators, num_prey, runtime):
+        #save the number of lives that the cuttlebot has
+        self.num_lives = num_lives
+        
+        #save the amount of time in minutes to run the forage program
+        self.runtime = runtime #minutes
+
+        #First, define the robot by its initialization time
+        self.initialization_time = datetime.datetime.now()
+        self.initialization_time_string = f"Y{self.initialization_time.year}_M{self.initialization_time.month}_D{self.initialization_time.day}_H{self.initialization_time.hour}_M{self.initialization_time.minute}_S{self.initialization_time.second}"
+        
+        #Get the experiment results folder
+        self.experiments_data_path = Path(__file__).resolve().parent.joinpath("Experiment_Results")
+
+        #Create folder to save data to
+        self.run_data_path = self.experiments_data_path.joinpath(f"RobotRuns_{self.initialization_time_string}")
+        self.run_data_path.mkdir(parents=True, exist_ok=False)
+
+        #create a folder to save the images of interest to
+        self.image_data_path = self.run_data_path.joinpath("Images")
+        self.image_data_path.mkdir(parents=True, exist_ok=False)
+
+        #Create a file of the actions taken by the robot
+        self.actions_file_path = self.run_data_path.joinpath("Actions.csv")
+        #update the Actions csv
+        data = ["Timestamp", "Image_Path", "Object_Color", "Bounding_Box_X", "Bounding_Box_Y", "Bounding_Box_Width", "Bounding_Box_Height", "Action_Planned", "Action_Execution", "Reward"]
+        self.write_header_to_action_csv(data)
+
+        #create file with data of robot runs
+        self.file_path = self.experiments_data_path.joinpath("RobotRuns.csv")
+        if(self.file_path.is_file()):
+            #if file exists, then only append data
+            with open(self.file_path, 'a', newline='') as file:
+                writer = csv.writer(file)
+                data = [str(self.run_data_path), str(self.initialization_time.strftime("%Y-%m-%d %H:%M:%S")), str(self.num_lives), str(learning_rate), str(softmax_beta), str(discount_factor), str(reward_predator), str(reward_prey), str(environment_type), str(num_predators), str(num_prey), str(self.runtime)]
+                writer.writerow(data)
+        else:
+            #if file doesnt exist, then create file and add headers
+            with open(self.file_path, 'w', newline='') as file:
+                writer = csv.writer(file)
+                header = ["Folder", "Timestamp", "Num_Lives", "Learning_Rate", "Beta_Softmax", "Gamma_Discount_Factor", "Reward_Predator", "Reward_Prey", "Environment_Type", "Num_Predators", "Num_Prey", "Runtime_Minutes"]
+                writer.writerow(header)
+                data = [str(self.run_data_path), str(self.initialization_time.strftime("%Y-%m-%d %H:%M:%S")), str(self.num_lives), str(learning_rate), str(softmax_beta), str(discount_factor), str(reward_predator), str(reward_prey), str(environment_type), str(num_predators), str(num_prey), str(self.runtime)]
+                writer.writerow(data)
+        
         #Instantiate the modules on the robot alongside the robot itself
         #First the rvr
         self.rvr = SpheroRvrObserver()
@@ -70,15 +117,17 @@ class Robot():
         #initiallize a color dictionary: assign a string to a hue value
         self.color_dict = {
             #"RED" : 175,
-            "GREEN" : 40, # intended Predator
+            "GREEN" : 35, # intended Predator
             "BLUE": 110 # intended Prey
         }
         #save the parameters of the robot
         self.learning_rate = learning_rate
         self.softmax_beta = softmax_beta
         self.discount_factor = discount_factor
+        self.reward_predator = reward_predator
+        self.reward_prey = reward_prey
         #Define the cognition module
-        self.cognition = Cognition(self.color_dict, self.learning_rate, self.softmax_beta, self.discount_factor)
+        self.cognition = Cognition(self.color_dict, self.learning_rate, self.softmax_beta, self.discount_factor, data_path=self.run_data_path)
         #The Bumper
         self.bumper = Bumper(self.rvr, self.claw, left_side_pin=board.D24, right_side_pin=board.D16, left_back_pin=board.D25, right_back_pin=board.D20)
         #The Shell
@@ -164,7 +213,7 @@ class Robot():
     def _run_blanch(self) -> None:
         global proportion_change
         prev_proportion_change = proportion_change
-        proportion_change = 0.5
+        proportion_change = 0.35
 
         self.rvr.enable_color_detection(is_enabled=True)
         self.rvr.sensor_control.add_sensor_data_handler(
@@ -244,12 +293,21 @@ class Robot():
             amount=180
         )
 
-        time.sleep(0.5)
+        start_time = time.time()
+        while(time.time()-start_time < 1):
+            self.shell.camouflage(color = camouflage_color, mode=1)
+            time.sleep(0.1)
+        
         self.rvr.drive_tank_si_units(
             left_velocity = 0.15,
             right_velocity = 0.15
         )
-        time.sleep(1)
+
+        start_time = time.time()
+        while(time.time()-start_time < 1):
+            self.shell.camouflage(color = camouflage_color, mode=1)
+            time.sleep(0.1)
+
         self.rvr.drive_tank_si_units(
             left_velocity = 0,
             right_velocity = 0
@@ -261,7 +319,7 @@ class Robot():
         self.shell.turn_off_shell()
 
 
-    def _align(self, color: int, timout: float = 7.0) -> bool:
+    def _align(self, color: int, timeout: float = 10.0) -> bool:
         '''Aligns the robot with a ball of the specified color.
 
         This function uses computer vision to detect and align the robot with a ball of the specified color. 
@@ -271,12 +329,14 @@ class Robot():
         self.vision.camera.set_color_filter(color, precision=10)
         first_run = True
         stop = False
-        K_p = 0.3
-        K_i = 0.05
+        K_p = 0.15
+        K_i = 0.025
         robot_proportion_angle_deg = 0
         robot_sum_angle_deg = 0
-        pan_offset = 5.0
-        while True:
+        pan_offset = -5.0
+        start_time = time.time()
+        while(time.time()-start_time <= timeout):
+            #shell hypnosis change time will act as delay for loop
             self.shell.next_hypnosis_step()
 
             mask = self.vision.camera.get_color_mask()
@@ -284,7 +344,8 @@ class Robot():
             if np.sum(mask/255) < 20:
                 time.sleep(0.1)
                 if stop:
-                    return False
+                    #lost track of object, exit loops
+                    break
                 stop = True
                 continue
 
@@ -311,27 +372,32 @@ class Robot():
             cur_pan_angle = -rel_point[0]/(self.vision.camera.width/2)
             cur_pan_angle *= 80.0 #160deg FOV -> +/- 80 deg
 
-            robot_proportion_angle_deg = K_p*cur_pan_angle
-            robot_sum_angle_deg += K_i*cur_pan_angle
+            #robot_proportion_angle_deg = K_p*cur_pan_angle
+            #robot_sum_angle_deg += K_i*cur_pan_angle
             
             #compute the turn velocity
-            curr_left_velocity = -(robot_proportion_angle_deg+robot_sum_angle_deg)/90.0
-            curr_right_velocity = (robot_proportion_angle_deg+robot_sum_angle_deg)/90.0
-            #Ensure that the velocity is never below 0.05 
-            if(curr_left_velocity > 0):
-                curr_left_velocity = max(curr_left_velocity, 0.15)
-                curr_right_velocity = min(curr_right_velocity, -0.15)
+            #curr_left_velocity = -(robot_proportion_angle_deg+robot_sum_angle_deg)/90.0
+            #curr_right_velocity = (robot_proportion_angle_deg+robot_sum_angle_deg)/90.0
+            if(cur_pan_angle > 0):
+                curr_left_velocity = -0.05
+                curr_right_velocity = -0.025
             else:
-                curr_left_velocity = min(curr_left_velocity, -0.15)
-                curr_right_velocity = max(curr_right_velocity, 0.15)
+                curr_left_velocity = -0.025
+                curr_right_velocity = -0.05
 
-            #slowly move backwards while aligning
-            curr_left_velocity -= 0.05
-            curr_right_velocity -= 0.05
+            
+            #Ensure that the velocity is never below 0.05 
+            #if(curr_left_velocity > 0):
+            #    curr_left_velocity = max(max(0.1,curr_left_velocity), 0.2)
+            #    curr_right_velocity = min(min(-0.1,curr_right_velocity), -0.2)
+            #else:
+            #    curr_left_velocity = min(min(-0.1,curr_left_velocity), -0.2)
+            #    curr_right_velocity = max(max(0.1,curr_right_velocity), 0.2)
 
             #check if the turn velocity has gotten small enough to stop update loop
-            print(np.abs(cur_pan_angle), np.abs(curr_left_velocity))
-            if not first_run and np.abs(cur_pan_angle) < 10.0 and np.abs(curr_left_velocity) <= 0.25:
+            #print(np.abs(cur_pan_angle), np.abs(curr_left_velocity))
+
+            if((not first_run) and (np.abs(cur_pan_angle+pan_offset) < 5.0)):
                 self.rvr.drive_tank_si_units(
                     left_velocity = 0,
                     right_velocity = 0
@@ -341,14 +407,27 @@ class Robot():
 
             #if not, keep updating speed
             else:
+                #have a small offset to move forward while flashing the shell
+                #curr_left_velocity -= 0.05
+                #curr_right_velocity -= 0.05
+                alpha_proportion = 3.0 - 2.0*np.exp(-10.0*np.power((cur_pan_angle/80.0), 2))
+                
                 self.rvr.drive_tank_si_units(
-                    left_velocity = curr_left_velocity,
-                    right_velocity = curr_right_velocity
+                    left_velocity = alpha_proportion*curr_left_velocity,
+                    right_velocity = alpha_proportion*curr_right_velocity
                 )
             
             #can only reach stopping condition if not on first run
             first_run = False
-            time.sleep(0.05)
+            self.bumper.move_off_bumper_press()
+            time.sleep(0.1)
+
+        #timeout or lost track of object
+        self.rvr.drive_tank_si_units(
+            left_velocity = 0,
+            right_velocity = 0
+        )
+        return False
 
     def _stalk(self, color: str) -> float: #float | None:
         '''Attempts to stalk an object of the specified color.
@@ -369,6 +448,7 @@ class Robot():
         p_width_1 = 0
         img_found = 0
         for i in range(5):
+            #shell hypnosis step acts as sleep due to large time to update
             self.shell.next_hypnosis_step()
             #get the color mask
             mask = self.vision.camera.get_color_mask()
@@ -417,13 +497,19 @@ class Robot():
             linear_speed=0.15,
             flags=0 if movement>0 else 1
         )
-        for i in range(5):
+
+        start_time = time.time()
+        while(time.time()-start_time < 1):
             self.shell.next_hypnosis_step()
-            time.sleep(0.1)
+            if(self.bumper.move_off_bumper_press()):
+                break
+            time.sleep(0.05)
+
         #get the average width of 3 pictures for the object at the new position
         p_width_2 = 0
         img_found = 0
         for i in range(5):
+            #shell hypnosis step acts as sleep due to large time to update
             self.shell.next_hypnosis_step()
             #get the color mask
             mask = self.vision.camera.get_color_mask()
@@ -474,14 +560,22 @@ class Robot():
     
     def _pounce(self, color: str, depth: float) -> float: #float | None:)
         #case after object
-        velocity = 0.9
-        self.rvr.drive_tank_si_units(
-            left_velocity = velocity,
-            right_velocity = velocity
-        )
-        distance_offset = 0.2 #m
-        if(depth-distance_offset > 0):
-            time.sleep((depth-distance_offset)/velocity)
+
+        #CAN MAKE POUNCE INTO A PROBABILISTIC EVENT (NEED TO SEARCH LITERATURE FIRST)
+
+        #pounce offset is 0.2m for depths from 0-0.6m and x% from 0.6m and beyond
+        #x determined to be 0.2m at 0.6m depth: x = 0.2/0.6 = 0.33
+        #0.6m depth cutoff chosen since that is when the depth estimation starts to break down
+        pounce_offset = max(0.2, 0.33*depth)  #m
+        depth_proportion = depth-pounce_offset #only until roughly 0.2 meters away
+        pounce_limit = pounce_offset #m
+        if(depth > pounce_limit):
+            velocity = 0.85
+            self.rvr.drive_tank_si_units(
+                left_velocity = velocity,
+                right_velocity = velocity
+            )
+            time.sleep(depth_proportion/velocity)
 
         #transition into move and grab code
         reward = self._move_and_grab_color(color, timeout_sec=5)
@@ -549,6 +643,19 @@ class Robot():
             #equation based on softmax with a logarithmic x-axis modified s.t. p(5) = 0.5
             np.exp(-3.4657/(100.0*area_proportion))
         )
+    
+    def write_header_to_action_csv(self, header):
+        #create file with the actions taken by the robot
+        with open(self.actions_file_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(header)
+
+    def append_data_to_action_csv(self, data):
+        #create file with the actions taken by the robot
+        with open(self.actions_file_path, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(data)
+
 
     def _perform_action(self, action: str, color: int) -> float:
         '''Performs the specified action.
@@ -560,16 +667,58 @@ class Robot():
         run away for a short duration. After performing the action, it returns the reward 
         received for the action.'''
 
+        current_datetime = datetime.datetime.now()
+        timestamp = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        #get the current view of the robot
+        image = self.vision.camera.get_image()
+        bounding_box = self.vision.get_bounding_box_for_color_in_image(image, color)
+        if(bounding_box == None):
+            bounding_box = (-1, -1, 0, 0)
+            #Only save image, no bounding box needed
+        else:
+            #save the image with the bounding box around the object of interest
+            image = cv2.rectangle(image, (bounding_box[0], bounding_box[1]), (bounding_box[0]+bounding_box[2], bounding_box[1]+bounding_box[3]), color=(255,0,0), thickness=2)
+        
+        #save the image to the image data directory
+        datetime_string_name = f"Y{current_datetime.year}_M{current_datetime.month}_D{current_datetime.day}_H{current_datetime.hour}_M{current_datetime.minute}_S{current_datetime.second}"
+        image_path = self.image_data_path.joinpath(f"image_{datetime_string_name}.png")
+        image = cv2.flip(image, 0)
+        cv2.imwrite(str(image_path), image)
+
+        #Get the name of the color from the color dict
+        color_name = None
+        for name in self.color_dict.keys():
+            if(self.color_dict[name] == color):
+                color_name = name
+                break
+        
+        #perform the action
         if action == 'APPROACH':
             reward = self._approach(color)
             
             self.claw.set_percent_open(100)
 
             if(reward < 0):
+                #update the csv
+                data = [str(timestamp), str(image_path), str(color_name), str(bounding_box[0]), str(bounding_box[1]), str(bounding_box[2]), str(bounding_box[3]), "APPROACH", "FAILED", reward]
+                self.append_data_to_action_csv(data)
+                #decrease the number of lives if the color was green
+                if(color_name == "GREEN"):
+                    self.num_lives -= 1
                 #blanch and then camo
                 self._run_blanch()
                 self._run_camo()
+            elif(reward == 0):
+                #Item lost and action was abandoned
+                #update the csv
+                data = [str(timestamp), str(image_path), str(color_name), str(bounding_box[0]), str(bounding_box[1]), str(bounding_box[2]), str(bounding_box[3]), "APPROACH", "ABANDONED", reward]
+                self.append_data_to_action_csv(data)
             else:
+                #update the csv
+                data = [str(timestamp), str(image_path), str(color_name), str(bounding_box[0]), str(bounding_box[1]), str(bounding_box[2]), str(bounding_box[3]), "APPROACH", "SUCCESS", reward]
+                self.append_data_to_action_csv(data)
+
+                #release object and move away
                 self.rvr.drive_tank_si_units(
                     left_velocity = -0.1,
                     right_velocity = -0.1
@@ -585,35 +734,42 @@ class Robot():
                     heading=0,  # Valid heading values are 0-359
                     amount=180
                 )
-                time.sleep(0.5)
-                self.rvr.drive_tank_si_units(
-                    left_velocity = 0.15,
-                    right_velocity = 0.15
-                )
                 time.sleep(1)
+                self.rvr.drive_tank_si_units(
+                    left_velocity = 0.2,
+                    right_velocity = 0.2
+                )
+                time.sleep(1.5)
                 self.rvr.drive_tank_si_units(
                     left_velocity = 0,
                     right_velocity = 0
                 )
         #run away
         elif action == 'RUN':
+            #Set the reward to be zero
+            reward = 0
             #get the current view of the robot
-            image = self.vision.camera.get_image()
-            bounding_box = self.vision.get_bounding_box_for_color_in_image(image, color)
             bb_area = bounding_box[2]*bounding_box[3]
             image_area = self.vision.camera.height*self.vision.camera.width
             bb_area_proportion = bb_area/image_area
             p_blanching = self._get_blanching_probability(bb_area_proportion)
             #test to see if the cuttlebot will blanch
             if(random.random() < p_blanching):
+                #update the csv
+                data = [str(timestamp), str(image_path), str(color_name), str(bounding_box[0]), str(bounding_box[1]), str(bounding_box[2]), str(bounding_box[3]), "RUN", "BLANCH", reward]
+                self.append_data_to_action_csv(data)
+
                 #blanch and then camo
                 self._run_blanch()
                 self._run_camo()
             #case for only camouflage
             else:
+                #update the csv
+                data = [str(timestamp), str(image_path), str(color_name), str(bounding_box[0]), str(bounding_box[1]), str(bounding_box[2]), str(bounding_box[3]), "RUN", "CAMOUFLAGE", reward]
+                self.append_data_to_action_csv(data)
+                #perform camooflauge action
                 self._run_camo()
             time.sleep(0.5)
-            reward = 0
         #return to center and reset camera
         ###self.vision.pan_tilt_unit.set_servo_angles(0, 0)
         return reward
@@ -623,7 +779,8 @@ class Robot():
         #loop forever and keep updating values
         #self._explore() # Rotate to a random direction
         counter = 1
-        while(1):
+        start_time = time.time()
+        while((time.time() - start_time <= self.runtime*60.0)) and (self.num_lives > 0):
             #Get list of colors in view of the camera
             colors_in_view = self.vision.get_colors_in_view(self.color_dict)
             print(f"colors in view = {colors_in_view}")
@@ -632,15 +789,18 @@ class Robot():
                 #explore: rotate to a random direction and see if any pictures were found again
                 self._explore_turn()
                 time.sleep(1)
-            #Check for colors after turning the robot
-            colors_in_view = self.vision.get_colors_in_view(self.color_dict)
-            #Check if any colors were found
-            if(len(colors_in_view) == 0):
-                #explore: rotate to a random direction and see if any pictures were found again
-                self._explore_move()
-                time.sleep(0.5)
-                #if there were still not object in view, then restart the loop
-                continue
+                
+                #Check for colors after turning the robot
+                colors_in_view = self.vision.get_colors_in_view(self.color_dict)
+                print(f"colors in view = {colors_in_view}")
+                
+                #Check if any colors were found
+                if(len(colors_in_view) == 0):
+                    #explore: rotate to a random direction and see if any pictures were found again
+                    self._explore_move()
+                    time.sleep(0.5)
+                    #if there were still not object in view, then restart the loop
+                    continue
 
             # Define the state of the robot: prioritize state with the most negative possible outcome (i.e. if the robot sees a prey and predator at the same time, it will prioritize to run away from the predator. But if the robot only sees one color in its view, it will always return that color as the state)
             #state = self.cognition.get_state_with_largest_view(colors_in_view)
@@ -679,6 +839,7 @@ class Robot():
 
         #control loop
         current_time = time.time()
+        object_lost = False
         while(time.time()-current_time < timeout_sec):
             # Get the color mask
             mask = self.vision.camera.get_color_mask()
@@ -692,7 +853,16 @@ class Robot():
                     right_velocity = driving_right_velocity
                 )
                 time.sleep(0.1)
+                #If a double fail condition is hit (object is lost), exit out of loop and return a reward of 0
+                if(object_lost):
+                    break
+
+                object_lost = True 
                 continue
+            
+            #reset object lost condition
+            object_lost = False
+
             #The mask exists and we know we have found an objects (>=100 active pixels in mask)
             #Get center index in (Row,Col) format
             mask_center = np.flip((np.array(mask.shape)-1)/2)
@@ -737,16 +907,15 @@ class Robot():
             )
             #Offset to account for offcentering
             driving_left_velocity += 0.025
-            #after computing the new velocity of the wheels, set the values to the rvr
-            self.rvr.drive_tank_si_units(
-                    left_velocity = driving_left_velocity,
-                    right_velocity = driving_right_velocity
-                )
             
             #print("driving left velocity:", driving_left_velocity)
             #print("driving_right_velocity:", driving_right_velocity)
             #if( largest_contour_bounding_box[2] > optimal_object_width):
             if largest_contour_bounding_box[1]/self.vision.camera.height <= 0.01:
+                #Change the velocity in proportion to the claw opennes
+                driving_left_velocity *= self.claw.get_percent_open()/100.0
+                driving_right_velocity *= self.claw.get_percent_open()/100.0
+
                 # When the object is close enough, close the claw and stop the robot
                 #self.claw.capture_object()
                 if(self.claw.get_percent_open() >= 10 and not self.claw.is_object_captured()):
@@ -755,7 +924,7 @@ class Robot():
                     time.sleep(0.1)
                 #claw is either closed all the way or has captured an object
                 elif(self.claw.get_percent_open() < 10):
-                    reward = -10
+                    reward = self.reward_predator
                     return reward
 
                 elif(self.claw.is_object_captured()):
@@ -764,16 +933,22 @@ class Robot():
                     #1 second time delay
                     time.sleep(1)
                     if(self.claw.is_object_captured()):
-                        reward = 5
+                        reward = self.reward_prey
                     else:
-                        reward = -10
+                        reward = self.reward_predator
                     return reward
                 
                 #error case, do not expect to run
                 else:
-                    reward = -10
+                    reward = 0
                     return reward
-                 
+            
+            #after computing the new velocity of the wheels, set the values to the rvr
+            self.rvr.drive_tank_si_units(
+                left_velocity = driving_left_velocity,
+                right_velocity = driving_right_velocity
+            )
+
             # Show the camera view and the masked image
             #cv2.imshow("frame", self.vision.camera.get_image())
             #cv2.imshow("mask", mask)

@@ -20,8 +20,8 @@ class Perception():
         #set the color filter and get the mask in the picture
         self.camera.set_color_filter(color, precision)
         color_mask = self.camera.color_filter.get_color_filter_mask(image)
-        #condition 1: the mask must have possibly found an object (more than 20 active pixels)
-        if(np.sum(color_mask/255) == 0):
+        #condition 1: the mask must have possibly found an object (more than 1 active pixels)
+        if(np.sum(color_mask/255) < 1):
             return(None)
         #get the width of the bounding box of the largest countour
         largest_contour = self.get_largest_contour(color_mask)
@@ -51,8 +51,8 @@ class Perception():
             #set the color filter and get the mask in the picture
             self.camera.set_color_filter(color_dict[color], precision)
             color_mask = self.camera.color_filter.get_color_filter_mask(image)
-            #condition 1: the mask must have possibly found an object (more than 20 active pixels)
-            if(np.sum(color_mask/255) < 20):
+            #condition 1: the mask must have possibly found an object (more than 15 active pixels)
+            if(np.sum(color_mask/255) < 15):
                 continue
             #get the width of the bounding box of the largest countour
             largest_contour = self.get_largest_contour(color_mask)
@@ -60,7 +60,7 @@ class Perception():
             bb_area = largest_contour_bounding_box[2]*largest_contour_bounding_box[3]
             bb_y = largest_contour_bounding_box[1]
             #condition 2 & 3: the object bounding box must have an area no less than 150 pixels^2 (reduces chance of contour being random noise) and the y position of the bounding box starting point must less than or equal to 90 (prevnts seeing far away objects/noise)
-            if(bb_area > 150 and bb_y <= 65):
+            if(bb_area >= 150 and bb_y <= 85):
                 colors_in_view.append(color)
         #return the list of colors in view
         return colors_in_view

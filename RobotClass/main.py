@@ -1,10 +1,76 @@
 from Robot import Robot
 import time
+import random
 
-robot = Robot(learning_rate=0.2, softmax_beta=1.0, discount_factor=0.9)
+robot = Robot(
+    #define the number of lives the cuttlebot has (number of times it can approach the predator before dieing)
+    num_lives=3,
+    
+    #Define the parameters for the robot's learning and behavior
+    learning_rate=0.2, 
+    softmax_beta=1.0, 
+    discount_factor=0.9, 
+
+    #define the rewards for the predators and prey
+    reward_predator=-10,
+    reward_prey=5,
+    
+    #Define the number of predators and prey
+    environment_type="HOMOGENEOUS", #{HOMOGENEOUS (Mixed), HETEROGENEOUS (Split), and PAIRED (Preditors & Prey close to eachother)} Change the Environment Type if you are changing the layout of the predators and prey
+    num_predators=3,
+    num_prey=3,
+
+    #define the amount of time (in minutes to run the robot)
+    runtime = 5 #minutes
+)
 
 robot.forage()
 
+
+#==========================
+#TEST CODE DOWN BELOW
+
+#robot._align(35)
+#robot._align(110)
+
+#input_color = 110 #starting color
+#while(input_color >= 0):
+#    robot.camera_color_mask_view(input_color)
+#    input_color = int(input("Hue Color: "))
+
+'''
+a = 1
+while(1):
+    print(a)
+    current_time = time.time()
+    while(time.time()-current_time < 5):
+        if(random.random() < 0.5):
+            robot.rvr.drive_tank_si_units(
+                left_velocity = a*-0.1,
+                right_velocity = a*-0.05
+            )
+        else:
+            robot.rvr.drive_tank_si_units(
+                left_velocity = a*0.05,
+                right_velocity = a*0.1
+            )
+        time.sleep(0.25)
+
+    current_time = time.time()
+    while(time.time()-current_time < 5):
+        if(random.random() < 0.5):
+            robot.rvr.drive_tank_si_units(
+                left_velocity = a*-0.05,
+                right_velocity = a*-0.1
+            )
+        else:
+            robot.rvr.drive_tank_si_units(
+                left_velocity = a*0.1,
+                right_velocity = a*0.05
+            )
+        time.sleep(0.25)
+    a += 0.5
+'''
 
 #robot._test_shell()
 #robot._run_blanch()
@@ -42,11 +108,6 @@ robot.forage()
 
 #robot._perform_action("APPROACH", 110)
 #robot._perform_action("RUN", 110)
-
-#input_color = 110 #starting color
-#while(input_color >= 0):
-#    robot.camera_color_mask_view(input_color)
-#    input_color = int(input("Hue Color: "))
 
 #while(1):
 #    robot.bumper.move_with_check(0.3, 0.3, 5)
