@@ -1,0 +1,11 @@
+Timestamp,Image_Path,Object_Color,Bounding_Box_X,Bounding_Box_Y,Bounding_Box_Width,Bounding_Box_Height,Action_Planned,Action_Execution,Reward
+2024-04-20 20:58:28,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H20_M58_S28.png,BLUE,171,65,32,57,APPROACH,SUCCESS,5
+2024-04-20 20:58:51,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H20_M58_S51.png,GREEN,26,82,58,58,RUN,CAMOUFLAGE,0
+2024-04-20 20:58:58,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H20_M58_S58.png,BLUE,251,80,32,45,APPROACH,SUCCESS,5
+2024-04-20 20:59:21,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H20_M59_S21.png,GREEN,152,0,135,169,APPROACH,FAILED,-10
+2024-04-20 20:59:47,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H20_M59_S47.png,BLUE,6,0,104,106,APPROACH,SUCCESS,5
+2024-04-20 21:00:17,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H21_M0_S17.png,BLUE,13,78,27,35,RUN,CAMOUFLAGE,0
+2024-04-20 21:00:52,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H21_M0_S52.png,BLUE,242,67,44,62,APPROACH,SUCCESS,5
+2024-04-20 21:01:26,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H21_M1_S26.png,BLUE,25,69,33,42,APPROACH,SUCCESS,5
+2024-04-20 21:01:49,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H21_M1_S49.png,BLUE,0,63,14,48,APPROACH,SUCCESS,5
+2024-04-20 21:02:43,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M57_S59/Images/image_Y2024_M4_D20_H21_M2_S43.png,BLUE,235,82,34,46,APPROACH,SUCCESS,5

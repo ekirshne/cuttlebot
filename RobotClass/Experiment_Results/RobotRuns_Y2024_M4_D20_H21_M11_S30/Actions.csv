@@ -1,0 +1,11 @@
+Timestamp,Image_Path,Object_Color,Bounding_Box_X,Bounding_Box_Y,Bounding_Box_Width,Bounding_Box_Height,Action_Planned,Action_Execution,Reward
+2024-04-20 21:11:41,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M11_S41.png,GREEN,151,78,71,74,RUN,BLANCH,0
+2024-04-20 21:11:51,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M11_S51.png,BLUE,283,59,37,66,APPROACH,SUCCESS,5
+2024-04-20 21:12:32,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M12_S32.png,GREEN,238,10,82,138,RUN,BLANCH,0
+2024-04-20 21:13:12,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M13_S12.png,BLUE,17,84,19,26,APPROACH,SUCCESS,5
+2024-04-20 21:13:40,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M13_S40.png,GREEN,123,40,100,113,RUN,BLANCH,0
+2024-04-20 21:14:20,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M14_S20.png,GREEN,260,24,60,41,RUN,CAMOUFLAGE,0
+2024-04-20 21:14:28,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M14_S28.png,GREEN,9,0,245,200,RUN,BLANCH,0
+2024-04-20 21:14:37,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M14_S37.png,GREEN,113,37,108,118,RUN,BLANCH,0
+2024-04-20 21:14:46,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M14_S46.png,GREEN,143,0,155,176,APPROACH,FAILED,-10
+2024-04-20 21:15:32,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H21_M11_S30/Images/image_Y2024_M4_D20_H21_M15_S32.png,GREEN,25,27,109,124,APPROACH,FAILED,-10

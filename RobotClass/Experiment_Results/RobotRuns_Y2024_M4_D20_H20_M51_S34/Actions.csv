@@ -1,0 +1,16 @@
+Timestamp,Image_Path,Object_Color,Bounding_Box_X,Bounding_Box_Y,Bounding_Box_Width,Bounding_Box_Height,Action_Planned,Action_Execution,Reward
+2024-04-20 20:51:49,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M51_S49.png,GREEN,0,54,27,82,RUN,CAMOUFLAGE,0
+2024-04-20 20:51:56,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M51_S56.png,GREEN,13,77,49,54,RUN,BLANCH,0
+2024-04-20 20:52:16,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M52_S16.png,BLUE,0,0,47,91,RUN,BLANCH,0
+2024-04-20 20:52:54,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M52_S54.png,BLUE,183,51,50,69,RUN,BLANCH,0
+2024-04-20 20:53:04,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M53_S4.png,BLUE,162,0,34,10,APPROACH,ABANDONED,0
+2024-04-20 20:53:24,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M53_S24.png,GREEN,30,64,58,78,APPROACH,FAILED,-10
+2024-04-20 20:53:52,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M53_S52.png,BLUE,18,68,24,39,APPROACH,SUCCESS,5
+2024-04-20 20:54:18,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M54_S18.png,BLUE,164,76,33,43,APPROACH,SUCCESS,5
+2024-04-20 20:54:44,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M54_S44.png,BLUE,85,65,37,52,RUN,BLANCH,0
+2024-04-20 20:54:53,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M54_S53.png,BLUE,48,77,28,33,APPROACH,SUCCESS,5
+2024-04-20 20:55:18,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M55_S18.png,BLUE,137,81,35,37,RUN,CAMOUFLAGE,0
+2024-04-20 20:55:28,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M55_S28.png,GREEN,276,78,44,50,RUN,CAMOUFLAGE,0
+2024-04-20 20:55:36,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M55_S36.png,BLUE,109,83,24,33,APPROACH,SUCCESS,5
+2024-04-20 20:56:19,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M56_S19.png,BLUE,0,48,12,23,APPROACH,SUCCESS,5
+2024-04-20 20:56:42,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D20_H20_M51_S34/Images/image_Y2024_M4_D20_H20_M56_S42.png,GREEN,158,0,119,174,APPROACH,FAILED,-10
