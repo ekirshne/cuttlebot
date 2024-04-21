@@ -1,0 +1,4 @@
+Timestamp,Image_Path,Object_Color,Bounding_Box_X,Bounding_Box_Y,Bounding_Box_Width,Bounding_Box_Height,Action_Planned,Action_Execution,Reward
+2024-04-21 12:56:04,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D21_H12_M54_S40/Images/image_Y2024_M4_D21_H12_M56_S4.png,GREEN,116,76,75,59,RUN,CAMOUFLAGE,0
+2024-04-21 12:56:40,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D21_H12_M54_S40/Images/image_Y2024_M4_D21_H12_M56_S40.png,BLUE,107,78,24,34,RUN,CAMOUFLAGE,0
+2024-04-21 12:56:50,/home/cuttlebot/cuttlebot/RobotClass/Experiment_Results/RobotRuns_Y2024_M4_D21_H12_M54_S40/Images/image_Y2024_M4_D21_H12_M56_S50.png,BLUE,41,79,21,28,RUN,CAMOUFLAGE,0
