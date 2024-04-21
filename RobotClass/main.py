@@ -7,7 +7,7 @@ robot = Robot(
     num_lives=3,
     
     #Define the parameters for the robot's learning and behavior
-    learning_rate=0.2, 
+    learning_rate=0.0,
     softmax_beta=1.0, 
     discount_factor=0.9, 
 
@@ -17,8 +17,8 @@ robot = Robot(
     
     #Define the number of predators and prey
     environment_type="HOMOGENEOUS", #{HOMOGENEOUS (Mixed), HETEROGENEOUS (Split), and PAIRED (Preditors & Prey close to eachother)} Change the Environment Type if you are changing the layout of the predators and prey
-    num_predators=1,
-    num_prey=1,
+    num_predators=3,
+    num_prey=3,
 
     #define the amount of time (in minutes to run the robot)
     runtime = 5 #minutes

@@ -955,6 +955,11 @@ class Robot():
         
         #return no reward if cannot get to object in given time
         reward = 0
+        #stop the RVR if the object was lost or the action timed out
+        self.rvr.drive_tank_si_units(
+            left_velocity = 0,
+            right_velocity = 0
+        )
         return reward
 
 
